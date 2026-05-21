@@ -576,40 +576,43 @@ function removeCourse(cid, grade) {
 
 function updateCredits() {
   let total = 0;
-  let ibcTotal =0;
+  let ibcTotal = 0;
   const cats = {};
+
   GRADES.forEach(g => {
     const credits = plan[g].reduce((sum, cid) => {
       const c = COURSES.find(x => x.id === cid);
-      if (c) {
-        cats[c.cat] = (cats[c.cat]||0) + c.credits;
+      if (!c) return sum;
 
-        if (c.ibc) {
-          ibcTotal += c.ibc;
-        }
-      }
-      return sum + (c ? c.credits : 0);
+      total += 0; // (kept implicit structure clean)
+      cats[c.cat] = (cats[c.cat] || 0) + c.credits;
+
+      if (c.ibc) ibcTotal += c.ibc;
+
+      return sum + c.credits;
     }, 0);
+
     total += credits;
+
     const el = document.getElementById(`credits-${g}`);
     if (el) el.textContent = `${credits} cr`;
   });
+
   const summary = document.getElementById('creditSummary');
-  summary.innerHTML = `<div class="credit-pill">Total <b>${total}</b> cr</div>` + `<div class="credit-pill"> IBC <b>${ibcTotal}</b> </div>`
-    Object.entries(cats).map(([k,v])=>`<div class="credit-pill cat-${k}"><span class="tag">${CAT_LABELS[k]}</span><b>${v}</b></div>`).join('');
-}
 
-function onDragStart(e, courseId, from) {
-  dragSource = {id:courseId, from};
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', courseId);
-  const ghost = document.getElementById('dragGhost');
-  const course = COURSES.find(c=>c.id===courseId);
-  ghost.textContent = course ? course.name : '';
-  e.dataTransfer.setDragImage(ghost, 0, 0);
-  setTimeout(() => { if(e.target.classList.contains('course-card')||e.target.classList.contains('placed-card')) e.target.classList.add('dragging'); }, 0);
-}
+  const catHTML = Object.entries(cats)
+    .map(([k, v]) =>
+      `<div class="credit-pill cat-${k}">
+        <span class="tag">${CAT_LABELS[k]}</span>
+        <b>${v}</b>
+      </div>`
+    ).join('');
 
+  summary.innerHTML =
+    `<div class="credit-pill">Total <b>${total}</b> cr</div>` +
+    `<div class="credit-pill">IBC <b>${ibcTotal}</b></div>` +
+    catHTML;
+}
 function onDragEnd() {
   document.querySelectorAll('.dragging').forEach(el=>el.classList.remove('dragging'));
   document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'));
