@@ -576,7 +576,7 @@ function removeCourse(cid, grade) {
 
 function updateCredits() {
   let total = 0;
-  let ibctotal =0;
+  let ibcTotal =0;
   const cats = {};
   GRADES.forEach(g => {
     const credits = plan[g].reduce((sum, cid) => {
