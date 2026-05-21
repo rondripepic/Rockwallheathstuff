@@ -199,7 +199,7 @@ const COURSES = [
   {id:'m_statsbus',name:'Statistics & Business Decision-Making (math credit)',cat:'math',grades:[11,12],credits:1},
   {id:'m_acct2',name:'Accounting II (math credit)',cat:'math',grades:[11,12],credits:1},
   {id:'m_robo2',name:'Robotics II (math credit)',cat:'math',grades:[10,11,12],credits:1},
-  {id:'m_mfg2',name:'Manufacturing Engineering Technology II (math credit)',cat:'math',grades:[11,12],credits:1},
+  {id:'m_mfg2',name:'Manufacturing Engineering Technology II (math credit)',cat:'math',grades:[11,12],credits:1, ibc: 1},
   {id:'m_cpmat',name:'College Prep: Mathematics',cat:'math',grades:[12],credits:1},
   // ── SCIENCE ──
   {id:'sci_bio',name:'Biology',cat:'science',grades:[9,10],credits:1},
@@ -282,7 +282,7 @@ const COURSES = [
   {id:'lot_cs1h',name:'Computer Science I Honors (LOTE credit)',cat:'lote',grades:[9,10,11,12],credits:1},
   {id:'lot_csp',name:'AP Computer Science Principles (LOTE credit)',cat:'lote',grades:[9,10,11,12],credits:1},
   {id:'lot_csa',name:'AP Computer Science A (LOTE + math credit)',cat:'lote',grades:[10,11,12],credits:2},
-  {id:'lot_cs3',name:'Computer Science III (LOTE credit)',cat:'lote',grades:[11,12],credits:1},
+  {id:'lot_cs3',name:'Computer Science III (LOTE credit)',cat:'lote',grades:[11,12],credits:1, ibc: 1},
   // ── IB ONLY ──
   {id:'ib_tok',name:'IB Theory of Knowledge',cat:'elective',grades:[11,12],credits:1},
   {id:'ib_res1',name:'IB Research Year 1',cat:'elective',grades:[11],credits:0.5},
@@ -347,51 +347,51 @@ const COURSES = [
   // ── CTE / ELECTIVES ──
   // Agriculture
   {id:'cte_agri1',name:'Principles of Agriculture, Food & Natural Resources',cat:'elective',grades:[9],credits:1},
-  {id:'cte_agrmech',name:'Agricultural Mechanics & Metal Technologies',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_agrpower',name:'Agricultural Power Systems',cat:'elective',grades:[11],credits:2},
-  {id:'cte_agrfab',name:'Agricultural Equipment Design & Fabrication',cat:'elective',grades:[11,12],credits:1},
-  {id:'cte_agprac',name:'Practicum in Agriculture (Technology)',cat:'elective',grades:[12],credits:2},
-  {id:'cte_floral1',name:'Floral Design',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_floral2',name:'Advanced Floral Design',cat:'elective',grades:[11,12],credits:1},
-  {id:'cte_floralprac',name:'Practicum in Floral Design',cat:'elective',grades:[12],credits:2},
-  {id:'cte_equine',name:'Equine Science',cat:'elective',grades:[10,11],credits:0.5},
+  {id:'cte_agrmech',name:'Agricultural Mechanics & Metal Technologies',cat:'elective',grades:[10,11],credits:1, ibc: 1},
+  {id:'cte_agrpower',name:'Agricultural Power Systems',cat:'elective',grades:[11],credits:2, ibc: 1},
+  {id:'cte_agrfab',name:'Agricultural Equipment Design & Fabrication',cat:'elective',grades:[11,12],credits:1, ibc: 1},
+  {id:'cte_agprac',name:'Practicum in Agriculture (Technology)',cat:'elective',grades:[12],credits:2, ibc: 1},
+  {id:'cte_floral1',name:'Floral Design',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
+  {id:'cte_floral2',name:'Advanced Floral Design',cat:'elective',grades:[11,12],credits:1, ibc: 1},
+  {id:'cte_floralprac',name:'Practicum in Floral Design',cat:'elective',grades:[12],credits:2, ibc: 1},
+  {id:'cte_equine',name:'Equine Science',cat:'elective',grades:[10,11],credits:0.5, ibc: 1},
   {id:'cte_smallanim',name:'Small Animal Management',cat:'elective',grades:[10,11],credits:0.5},
-  {id:'cte_livestock',name:'Livestock & Poultry Production',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_vetsci',name:'Veterinary Science',cat:'elective',grades:[11],credits:1},
-  {id:'cte_vetprac',name:'Practicum in Veterinary Medicine',cat:'elective',grades:[12],credits:2},
+  {id:'cte_livestock',name:'Livestock & Poultry Production',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
+  {id:'cte_vetsci',name:'Veterinary Science',cat:'elective',grades:[11],credits:1, ibc: 1},
+  {id:'cte_vetprac',name:'Practicum in Veterinary Medicine',cat:'elective',grades:[12],credits:2, ibc: 1},
   // Architecture
   {id:'cte_arch1',name:'Principles of Architecture',cat:'elective',grades:[9],credits:1},
   {id:'cte_arch2',name:'Architectural Design I',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_arch3',name:'Architectural Design II',cat:'elective',grades:[11,12],credits:2},
+  {id:'cte_arch3',name:'Architectural Design II',cat:'elective',grades:[11,12],credits:2, ibc: 1},
   {id:'cte_archprac',name:'Practicum in Architectural Design',cat:'elective',grades:[12],credits:2},
   // AAVTC
   {id:'cte_aavtc1',name:'Principles of Arts, A/V Tech & Communications',cat:'elective',grades:[9],credits:1},
   {id:'cte_anim1',name:'Animation I',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_anim2',name:'Animation II with Lab',cat:'elective',grades:[11,12],credits:2},
+  {id:'cte_anim2',name:'Animation II with Lab',cat:'elective',grades:[11,12],credits:2, ibc: 1},
   {id:'cte_animp',name:'Practicum in Animation',cat:'elective',grades:[12],credits:2},
   {id:'cte_avp1',name:'Audio/Video Production I',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_avp2',name:'Audio/Video Production II with Lab',cat:'elective',grades:[11,12],credits:2},
-  {id:'cte_avpp',name:'Practicum in Audio/Video Production',cat:'elective',grades:[12],credits:2},
+  {id:'cte_avp2',name:'Audio/Video Production II with Lab',cat:'elective',grades:[11,12],credits:2, ibc: 1},
+  {id:'cte_avpp',name:'Practicum in Audio/Video Production',cat:'elective',grades:[12],credits:2, ibc: 1},
   {id:'cte_fashion1',name:'Fashion Design I',cat:'elective',grades:[9],credits:1},
   {id:'cte_fashion2',name:'Fashion Design II with Lab',cat:'elective',grades:[10,11],credits:2},
   {id:'cte_fashionp',name:'Practicum in Fashion Design I',cat:'elective',grades:[11,12],credits:2},
-  {id:'cte_gdi1',name:'Graphic Design & Illustration I',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_gdi2',name:'Graphic Design & Illustration II with Lab',cat:'elective',grades:[11,12],credits:2},
-  {id:'cte_gdip',name:'Practicum in Graphic Design & Illustration',cat:'elective',grades:[12],credits:2},
+  {id:'cte_gdi1',name:'Graphic Design & Illustration I',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
+  {id:'cte_gdi2',name:'Graphic Design & Illustration II with Lab',cat:'elective',grades:[11,12],credits:2, ibc: 1},
+  {id:'cte_gdip',name:'Practicum in Graphic Design & Illustration',cat:'elective',grades:[12],credits:2, ibc: 1},
   {id:'cte_photo1',name:'Commercial Photography I',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_photo2',name:'Commercial Photography II with Lab',cat:'elective',grades:[11,12],credits:2},
+  {id:'cte_photo2',name:'Commercial Photography II with Lab',cat:'elective',grades:[11,12],credits:2, ibc: 1},
   {id:'cte_photop',name:'Practicum in Commercial Photography',cat:'elective',grades:[12],credits:2},
   {id:'cte_vgd1',name:'Video Game Design',cat:'elective',grades:[10,11],credits:1},
   {id:'cte_vgd2',name:'Video Game Programming',cat:'elective',grades:[11,12],credits:1},
-  {id:'cte_vgd3',name:'Advanced Video Game Programming',cat:'elective',grades:[12],credits:1},
+  {id:'cte_vgd3',name:'Advanced Video Game Programming',cat:'elective',grades:[12],credits:1, ibc: 1},
   // Business / Marketing / Finance
   {id:'cte_bus1',name:'Principles of Business, Marketing & Finance',cat:'elective',grades:[9,10],credits:1},
   {id:'cte_money',name:'Money Matters',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_acct1',name:'Accounting I',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_entrep',name:'Entrepreneurship',cat:'elective',grades:[11,12],credits:1},
+  {id:'cte_acct1',name:'Accounting I',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
+  {id:'cte_entrep',name:'Entrepreneurship',cat:'elective',grades:[11,12],credits:1, ibc: 1},
   {id:'cte_bustech1',name:'Foundations of Business Communication & Technologies',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_bustech2',name:'Business Communication & Technologies II',cat:'elective',grades:[11,12],credits:1},
-  {id:'cte_busmgmt',name:'Business Management',cat:'elective',grades:[10,11],credits:1},
+  {id:'cte_bustech2',name:'Business Communication & Technologies II',cat:'elective',grades:[11,12],credits:1, ibc: 1},
+  {id:'cte_busmgmt',name:'Business Management',cat:'elective',grades:[10,11],credits:1, ibc: 1},
   {id:'cte_vbiz',name:'Virtual Business',cat:'elective',grades:[11,12],credits:0.5},
   {id:'cte_hr',name:'Human Resource Management',cat:'elective',grades:[11,12],credits:0.5},
   {id:'cte_sports_mkt',name:'Sports & Entertainment Marketing',cat:'elective',grades:[10,11],credits:0.5},
@@ -403,46 +403,46 @@ const COURSES = [
   {id:'cte_eng1',name:'Engineering Design Process',cat:'elective',grades:[9,10],credits:1},
   {id:'cte_robo1',name:'Robotics I',cat:'elective',grades:[9,10,11],credits:1},
   {id:'cte_engdes',name:'Engineering Design & Presentation',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_engdes2',name:'Advanced Engineering Design & Presentation (UT DE)',cat:'elective',grades:[11,12],credits:2},
+  {id:'cte_engdes2',name:'Advanced Engineering Design & Presentation (UT DE)',cat:'elective',grades:[11,12],credits:2, ibc: 1},
   {id:'cte_progeng',name:'Programming for Engineers',cat:'elective',grades:[11,12],credits:1},
-  {id:'cte_engprac',name:'Practicum in Engineering',cat:'elective',grades:[12],credits:2},
-  {id:'cte_uav2',name:'UAV II / Drone Program',cat:'elective',grades:[11,12],credits:1},
+  {id:'cte_engprac',name:'Practicum in Engineering',cat:'elective',grades:[12],credits:2, ibc: 1},
+  {id:'cte_uav2',name:'UAV II / Drone Program',cat:'elective',grades:[11,12],credits:1, ibc: 1},
   // IT / Cybersecurity
-  {id:'cte_cyber1',name:'AP CK Cybersecurity',cat:'elective',grades:[9,10,11,12],credits:1},
-  {id:'cte_cyber2',name:'AP CK Cyber: Networking',cat:'elective',grades:[10,11,12],credits:1},
+  {id:'cte_cyber1',name:'AP CK Cybersecurity',cat:'elective',grades:[9,10,11,12],credits:1, ibc: 1},
+  {id:'cte_cyber2',name:'AP CK Cyber: Networking',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
   {id:'cte_cybercap',name:'Cybersecurity Capstone',cat:'elective',grades:[11,12],credits:1},
   // Manufacturing
   {id:'cte_mfg1',name:'Principles of Manufacturing',cat:'elective',grades:[9,10,11],credits:1},
-  {id:'cte_mfgtech1',name:'Manufacturing Engineering Technology I',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_mfgprac',name:'Practicum in Manufacturing',cat:'elective',grades:[11,12],credits:2},
+  {id:'cte_mfgtech1',name:'Manufacturing Engineering Technology I',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
+  {id:'cte_mfgprac',name:'Practicum in Manufacturing',cat:'elective',grades:[11,12],credits:2, ibc: 1},
   // Hospitality / Culinary
   {id:'cte_cul0',name:'Introduction to Culinary Arts',cat:'elective',grades:[9,10],credits:1},
-  {id:'cte_cul1',name:'Culinary Arts',cat:'elective',grades:[10,11],credits:2},
+  {id:'cte_cul1',name:'Culinary Arts',cat:'elective',grades:[10,11],credits:2, ibc: 1},
   {id:'cte_cul2',name:'Advanced Culinary Arts',cat:'elective',grades:[11,12],credits:2},
   {id:'cte_culprac',name:'Practicum in Culinary Arts',cat:'elective',grades:[12],credits:2},
   // Education & Training
   {id:'cte_edu1',name:'Principles of Education & Training',cat:'elective',grades:[9],credits:1},
   {id:'cte_edu2',name:'Technology for Teaching',cat:'elective',grades:[10,11,12],credits:1},
   {id:'cte_edu3',name:'Instructional Practices',cat:'elective',grades:[11,12],credits:2},
-  {id:'cte_eduprac',name:'Practicum in Education & Training',cat:'elective',grades:[12],credits:2},
+  {id:'cte_eduprac',name:'Practicum in Education & Training',cat:'elective',grades:[12],credits:2, ibc: 1},
   // Health Science
   {id:'cte_medterm',name:'Medical Terminology',cat:'elective',grades:[9],credits:1},
   {id:'cte_hsci',name:'Health Science Theory',cat:'elective',grades:[10,11],credits:1},
   {id:'cte_pct1',name:'Patient Care Technician I (Dual Credit)',cat:'elective',grades:[11],credits:3},
   {id:'cte_pct2',name:'Patient Care Technician II (Dual Credit)',cat:'elective',grades:[12],credits:3},
   {id:'cte_dental1',name:'Dental I – Practicum in Health Science I',cat:'elective',grades:[11],credits:2},
-  {id:'cte_dental2',name:'Dental II – Practicum in Health Science II',cat:'elective',grades:[12],credits:2},
+  {id:'cte_dental2',name:'Dental II – Practicum in Health Science II',cat:'elective',grades:[12],credits:2, ibc: 1},
   {id:'cte_emtprep',name:'EMT Prep: Medical Disaster Response',cat:'elective',grades:[11],credits:1},
-  {id:'cte_emt',name:'EMT – Practicum in Health Science I',cat:'elective',grades:[12],credits:2},
+  {id:'cte_emt',name:'EMT – Practicum in Health Science I',cat:'elective',grades:[12],credits:2, ibc: 1},
   {id:'cte_pharm',name:'Pharmacology',cat:'elective',grades:[11],credits:1},
-  {id:'cte_pharmprac',name:'Pharmacy Technician – Practicum in Health Science',cat:'elective',grades:[12],credits:2},
-  {id:'cte_medclin',name:'Medical Clinical – Practicum in Health Science I',cat:'elective',grades:[11],credits:2},
-  {id:'cte_medintern',name:'Internship – Practicum in Health Science II',cat:'elective',grades:[12],credits:2},
+  {id:'cte_pharmprac',name:'Pharmacy Technician – Practicum in Health Science',cat:'elective',grades:[12],credits:2, ibc: 1},
+  {id:'cte_medclin',name:'Medical Clinical – Practicum in Health Science I',cat:'elective',grades:[11],credits:2, ibc: 1},
+  {id:'cte_medintern',name:'Internship – Practicum in Health Science II',cat:'elective',grades:[12],credits:2, ibc: 1},
   // Law / JROTC
   {id:'cte_law1',name:'Principles of Law, Public Safety, Corrections & Security',cat:'elective',grades:[9],credits:1},
   {id:'cte_lawenf1',name:'Law Enforcement I',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_lawenf2',name:'Law Enforcement II',cat:'elective',grades:[11,12],credits:1},
-  {id:'cte_legalres',name:'Legal Research',cat:'elective',grades:[10,11],credits:1},
+  {id:'cte_lawenf2',name:'Law Enforcement II',cat:'elective',grades:[11,12],credits:1, ibc: 1},
+  {id:'cte_legalres',name:'Legal Research',cat:'elective',grades:[10,11],credits:1, ibc: 1},
   {id:'cte_court',name:'Court Systems & Practices',cat:'elective',grades:[12],credits:1},
   {id:'cte_crimeinv',name:'Criminal Investigation',cat:'elective',grades:[12],credits:1},
   {id:'cte_lawprac',name:'Practicum in Law, Public Safety & Security',cat:'elective',grades:[12],credits:2},
@@ -576,11 +576,18 @@ function removeCourse(cid, grade) {
 
 function updateCredits() {
   let total = 0;
+  let ibctotal =0;
   const cats = {};
   GRADES.forEach(g => {
     const credits = plan[g].reduce((sum, cid) => {
       const c = COURSES.find(x => x.id === cid);
-      if (c) { cats[c.cat] = (cats[c.cat]||0) + c.credits; }
+      if (c) {
+        cats[c.cat] = (cats[c.cat]||0) + c.credits;
+
+        if (c.ibc) {
+          ibcTotal += c.ibc;
+        }
+      }
       return sum + (c ? c.credits : 0);
     }, 0);
     total += credits;
@@ -588,7 +595,7 @@ function updateCredits() {
     if (el) el.textContent = `${credits} cr`;
   });
   const summary = document.getElementById('creditSummary');
-  summary.innerHTML = `<div class="credit-pill">Total <b>${total}</b> cr</div>` +
+  summary.innerHTML = `<div class="credit-pill">Total <b>${total}</b> cr</div>` + `<div class="credit-pill"> IBC <b>${ibcTotal}</b> </div>`
     Object.entries(cats).map(([k,v])=>`<div class="credit-pill cat-${k}"><span class="tag">${CAT_LABELS[k]}</span><b>${v}</b></div>`).join('');
 }
 
