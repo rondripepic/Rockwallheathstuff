@@ -933,8 +933,8 @@
       // ── Health Science ───────────────────────────────────────────
       { id: 'cte_medterm',   name: 'Medical Terminology',                                cat: 'elective', grades: [9],   credits: 1         },
       { id: 'cte_hsci',      name: 'Health Science Theory',                              cat: 'elective', grades: [10,11],credits: 1         },
-      { id: 'cte_pct1',      name: 'Patient Care Technician I (Dual Credit)',            cat: 'elective', grades: [11],  credits: 3         },
-      { id: 'cte_pct2',      name: 'Patient Care Technician II (Dual Credit)',           cat: 'elective', grades: [12],  credits: 3         },
+      { id: 'cte_pct1',      name: 'Patient Care Technician I (Dual Credit)',            cat: ['elective', 'college'], grades: [11],  credits: 3         },
+      { id: 'cte_pct2',      name: 'Patient Care Technician II (Dual Credit)',           cat: ['elective', 'college'], grades: [12],  credits: 3         },
       { id: 'cte_dental1',   name: 'Dental I – Practicum in Health Science I',          cat: 'elective', grades: [11],  credits: 2         },
       { id: 'cte_dental2',   name: 'Dental II – Practicum in Health Science II',        cat: 'elective', grades: [12],  credits: 2, ibc: 1 },
       { id: 'cte_emtprep',   name: 'EMT Prep: Medical Disaster Response',               cat: 'elective', grades: [11],  credits: 1         },
@@ -959,12 +959,12 @@
       { id: 'cte_jrotc4', name: 'JROTC Year IV',  cat: 'elective', grades: [12],       credits: 1 },
 
       // ── Trade / Dual-Credit programs (offered off-campus) ────────
-      { id: 'cte_weld1',     name: 'Welding I & II (Dual Credit)',            cat: 'elective', grades: [11], credits: 4 },
-      { id: 'cte_weld2',     name: 'Welding III & IV (Dual Credit)',          cat: 'elective', grades: [12], credits: 4 },
-      { id: 'cte_auto1',     name: 'Automotive Technology I & II (Dual Credit)', cat: 'elective', grades: [12], credits: 4 },
-      { id: 'cte_collision', name: 'Auto Collision Technology (Dual Credit)', cat: 'elective', grades: [12], credits: 4 },
-      { id: 'cte_hvac1',     name: 'HVAC I (Dual Credit)',                    cat: 'elective', grades: [11], credits: 4 },
-      { id: 'cte_hvac2',     name: 'HVAC II (Dual Credit)',                   cat: 'elective', grades: [12], credits: 4 },
+      { id: 'cte_weld1',     name: 'Welding I & II (Dual Credit)',            cat: ['elective', 'college'], grades: [11], credits: 4 },
+      { id: 'cte_weld2',     name: 'Welding III & IV (Dual Credit)',          cat: ['elective', 'college'], grades: [12], credits: 4 },
+      { id: 'cte_auto1',     name: 'Automotive Technology I & II (Dual Credit)', cat: ['elective', 'college'], grades: [12], credits: 4 },
+      { id: 'cte_collision', name: 'Auto Collision Technology (Dual Credit)', cat: ['elective', 'college'], grades: [12], credits: 4 },
+      { id: 'cte_hvac1',     name: 'HVAC I (Dual Credit)',                    cat: ['elective', 'college'], grades: [11], credits: 4 },
+      { id: 'cte_hvac2',     name: 'HVAC II (Dual Credit)',                   cat: ['elective', 'college'], grades: [12], credits: 4 },
 
       // ── Career Preparation / General ─────────────────────────────
       { id: 'cte_cp1',     name: 'Career Preparation I',        cat: 'elective', grades: [11,12],    credits: 2 },
