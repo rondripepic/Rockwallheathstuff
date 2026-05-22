@@ -564,7 +564,7 @@
       fine:     'Fine Arts',
       pe:       'PE/Athletics',
       elective: 'CTE/Elective',
-      college_credit: 'College credit'
+      college: 'College credit'
     };
 
     const GRADES      = [9, 10, 11, 12];
@@ -577,7 +577,7 @@
     // Each course object:
     //   id      – unique string key (used in saved plans)
     //   name    – display name
-    //   cat     – category key (must match CAT_LABELS above)
+    //   cat     – category key or array of category keys (must match CAT_LABELS above)
     //   grades  – array of grade levels where the course is available
     //   credits – credit value (can be fractional, e.g. 0.5)
     //   ibc     – (optional) number of Industry-Based Certifications
@@ -612,7 +612,7 @@
       { id: 'epractwrite', name: 'Practical Writing Skills',                     cat: 'english', grades: [9,10,11],    credits: 1   },
       { id: 'eread',       name: 'Reading I–III',                                cat: 'english', grades: [9,10,11,12], credits: 1   },
       { id: 'ecollread',   name: 'College Readiness and Study Skills',           cat: 'english', grades: [9,10,11,12], credits: 0.5 },
-      { id: 'ecpela',      name: 'College Prep: English Language Arts',          cat: 'english' && 'college_credit', grades: [12],         credits: 1   },
+      { id: 'ecpela',      name: 'College Prep: English Language Arts',          cat: 'english', grades: [12],         credits: 1   },
 
       // ── Journalism / Speech ──────────────────────────────────────
       { id: 'j1',          name: 'Beginning Journalism',                         cat: 'elective', grades: [9,10,11,12],  credits: 0.5 },
@@ -752,7 +752,7 @@
       // CTE courses that also satisfy LOTE credit
       { id: 'lot_cs1h',   name: 'Computer Science I Honors (LOTE credit)',          cat: 'lote', grades: [9,10,11,12], credits: 1 },
       { id: 'lot_csp',    name: 'AP Computer Science Principles (LOTE credit)',     cat: 'lote', grades: [9,10,11,12], credits: 1 },
-      { id: 'lot_csa',    name: 'AP Computer Science A (LOTE + math credit)',       cat: 'lote', grades: [10,11,12],   credits: 2 },
+      { id: 'lot_csa',    name: 'AP Computer Science A (LOTE + math credit)',       cat: ['lote', 'math'], grades: [10,11,12],   credits: 2 },
       { id: 'lot_cs3',    name: 'Computer Science III (LOTE credit)',               cat: 'lote', grades: [11,12],      credits: 1, ibc: 1 },
 
       // ── IB Core (not a standalone subject but needs a slot) ──────
@@ -1063,6 +1063,25 @@
       renderSidebar(query);
     }
 
+    function getCourseCats(course) {
+      return Array.isArray(course.cat) ? course.cat : [course.cat];
+    }
+
+    function getPrimaryCourseCat(course) {
+      const cats = getCourseCats(course);
+      return cats.length ? cats[0] : 'elective';
+    }
+
+    function courseMatchesCategory(course, cat) {
+      return cat === 'all' || getCourseCats(course).includes(cat);
+    }
+
+    function getCourseCategoryLabel(course) {
+      return getCourseCats(course)
+        .map(c => CAT_LABELS[c] || c)
+        .join(' / ');
+    }
+
     /** Returns a Set of every course ID that is already in the plan */
     function getPlacedIds() {
       return new Set([...plan[9], ...plan[10], ...plan[11], ...plan[12]]);
@@ -1075,7 +1094,7 @@
 
       // Filter courses by active category and search query
       const filtered = COURSES.filter(course => {
-        const matchesCat   = activeFilter === 'all' || course.cat === activeFilter;
+        const matchesCat   = courseMatchesCategory(course, activeFilter);
         const matchesQuery = !query || course.name.toLowerCase().includes(query);
         return matchesCat && matchesQuery;
       });
@@ -1098,14 +1117,16 @@
       for (const course of filtered) {
         const isPlaced = placed.has(course.id);
         const card     = document.createElement('div');
+        const primaryCat = getPrimaryCourseCat(course);
+        const categoryLabel = getCourseCategoryLabel(course);
 
-        card.className   = `course-card cat-${course.cat}${isPlaced ? ' placed' : ''}`;
+        card.className   = `course-card cat-${primaryCat}${isPlaced ? ' placed' : ''}`;
         card.draggable   = !isPlaced;
         card.dataset.id  = course.id;
         card.innerHTML   = `
           <div class="course-name">${course.name}</div>
           <div class="course-meta">
-            <span class="tag">${CAT_LABELS[course.cat]}</span>
+            <span class="tag">${categoryLabel}</span>
             <span class="grade-tag">Gr ${course.grades.join(', ')} · ${course.credits} cr</span>
             ${isPlaced ? '<span class="grade-tag">✓ placed</span>' : ''}
           </div>`;
@@ -1170,8 +1191,9 @@
 
     /** Build a single placed-course card inside a grade column */
     function makePlacedCard(course, grade) {
+      const primaryCat = getPrimaryCourseCat(course);
       const card = document.createElement('div');
-      card.className  = `placed-card cat-${course.cat}`;
+      card.className  = `placed-card cat-${primaryCat}`;
       card.draggable  = true;
       card.dataset.id = course.id;
       card.innerHTML  = `
@@ -1211,7 +1233,9 @@
           if (!course) continue;
 
           gradeCredits += course.credits;
-          creditsByCategory[course.cat] = (creditsByCategory[course.cat] || 0) + course.credits;
+          for (const cat of getCourseCats(course)) {
+            creditsByCategory[cat] = (creditsByCategory[cat] || 0) + course.credits;
+          }
 
           if (course.ibc) totalIBCs += course.ibc;
         }
