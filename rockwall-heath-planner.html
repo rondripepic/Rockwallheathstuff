@@ -564,6 +564,7 @@
       fine:     'Fine Arts',
       pe:       'PE/Athletics',
       elective: 'CTE/Elective',
+      college_credit: 'College credit'
     };
 
     const GRADES      = [9, 10, 11, 12];
@@ -611,7 +612,7 @@
       { id: 'epractwrite', name: 'Practical Writing Skills',                     cat: 'english', grades: [9,10,11],    credits: 1   },
       { id: 'eread',       name: 'Reading I–III',                                cat: 'english', grades: [9,10,11,12], credits: 1   },
       { id: 'ecollread',   name: 'College Readiness and Study Skills',           cat: 'english', grades: [9,10,11,12], credits: 0.5 },
-      { id: 'ecpela',      name: 'College Prep: English Language Arts',          cat: 'english', grades: [12],         credits: 1   },
+      { id: 'ecpela',      name: 'College Prep: English Language Arts',          cat: 'english' && 'college_credit', grades: [12],         credits: 1   },
 
       // ── Journalism / Speech ──────────────────────────────────────
       { id: 'j1',          name: 'Beginning Journalism',                         cat: 'elective', grades: [9,10,11,12],  credits: 0.5 },
