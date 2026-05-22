@@ -1,644 +1,1302 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rockwall-Heath Course Planner 2026–27</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #f7f5f0; --surface: #ffffff; --border: #e2ddd6; --text: #1a1714;
-    --muted: #8a8278; --accent: #1a5c3a; --accent-light: #eaf3ee; --accent2: #c8471e;
-    --tag-english: #dbeafe; --tag-english-text: #1e40af;
-    --tag-math: #fef3c7; --tag-math-text: #92400e;
-    --tag-science: #d1fae5; --tag-science-text: #065f46;
-    --tag-ss: #fce7f3; --tag-ss-text: #9d174d;
-    --tag-lote: #ede9fe; --tag-lote-text: #5b21b6;
-    --tag-elective: #ffedd5; --tag-elective-text: #9a3412;
-    --tag-fine: #fdf4ff; --tag-fine-text: #7e22ce;
-    --tag-pe: #ecfdf5; --tag-pe-text: #064e3b;
-    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.05);
-    --shadow-drag: 0 8px 30px rgba(0,0,0,.15);
-    --radius: 8px;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
-  header { background: var(--text); color: #fff; padding: 18px 28px; display: flex; align-items: baseline; gap: 14px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
-  header h1 { font-family: 'DM Serif Display', serif; font-size: 1.35rem; letter-spacing: -.01em; }
-  header span { font-family: 'DM Mono', monospace; font-size: .72rem; color: #9ca3af; letter-spacing: .05em; }
-  .header-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
-  .btn { padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: .8rem; font-weight: 500; transition: all .15s; }
-  .btn-outline { background: transparent; color: #d1d5db; border: 1px solid #374151; }
-  .btn-outline:hover { border-color: #9ca3af; color: #fff; }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: #156b45; }
-  .app { display: grid; grid-template-columns: 310px 1fr; height: calc(100vh - 57px); }
-  .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-  .sidebar-header { padding: 16px 18px 10px; border-bottom: 1px solid var(--border); }
-  .sidebar-header h2 { font-family: 'DM Serif Display', serif; font-size: 1rem; margin-bottom: 10px; }
-  .search-wrap { position: relative; }
-  .search-wrap input { width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--border); border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: .82rem; background: var(--bg); outline: none; transition: border-color .15s; }
-  .search-wrap input:focus { border-color: var(--accent); }
-  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; }
-  .filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; padding: 10px 18px; border-bottom: 1px solid var(--border); }
-  .filter-tab { padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); background: transparent; font-family: 'DM Sans', sans-serif; font-size: .72rem; cursor: pointer; color: var(--muted); transition: all .12s; white-space: nowrap; }
-  .filter-tab.active, .filter-tab:hover { background: var(--text); color: #fff; border-color: var(--text); }
-  .course-list { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; }
-  .course-list::-webkit-scrollbar { width: 4px; }
-  .course-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  .course-card { padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); cursor: grab; transition: all .15s; user-select: none; display: flex; flex-direction: column; gap: 4px; }
-  .course-card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-1px); }
-  .course-card.dragging { opacity: .4; cursor: grabbing; }
-  .course-card.placed { opacity: .45; background: var(--bg); cursor: default; }
-  .course-name { font-size: .82rem; font-weight: 500; line-height: 1.3; }
-  .course-meta { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
-  .tag { font-family: 'DM Mono', monospace; font-size: .65rem; padding: 1px 7px; border-radius: 20px; white-space: nowrap; }
-  .grade-tag { font-size: .65rem; color: var(--muted); font-family: 'DM Mono', monospace; }
-  .planner { overflow: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
-  .planner-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  .planner-top h2 { font-family: 'DM Serif Display', serif; font-size: 1.15rem; }
-  .credit-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
-  .credit-pill { padding: 4px 12px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); font-size: .72rem; font-family: 'DM Mono', monospace; display: flex; gap: 5px; align-items: center; }
-  .credit-pill b { color: var(--accent); }
-  .grade-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .grade-col { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
-  .grade-col-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 8px; }
-  .grade-col-header h3 { font-family: 'DM Serif Display', serif; font-size: 1rem; }
-  .grade-badge { font-family: 'DM Mono', monospace; font-size: .65rem; color: var(--muted); }
-  .credits-count { margin-left: auto; font-family: 'DM Mono', monospace; font-size: .7rem; color: var(--accent); font-weight: 500; }
-  .drop-zone { padding: 10px; min-height: 80px; display: flex; flex-direction: column; gap: 6px; transition: background .15s; }
-  .drop-zone.drag-over { background: var(--accent-light); border-radius: 8px; }
-  .placed-card { padding: 8px 11px; border-radius: 7px; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: flex-start; gap: 8px; cursor: grab; transition: all .15s; user-select: none; animation: pop-in .2s ease; }
-  @keyframes pop-in { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .placed-card:hover { border-color: var(--accent2); background: #fff8f7; }
-  .placed-card.dragging { opacity: .3; }
-  .placed-name { font-size: .78rem; font-weight: 500; line-height: 1.3; flex: 1; }
-  .remove-btn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 13px; padding: 0; line-height: 1; transition: color .1s; flex-shrink: 0; }
-  .remove-btn:hover { color: var(--accent2); }
-  .drop-hint { color: var(--muted); font-size: .72rem; text-align: center; padding: 12px 0; border: 1.5px dashed var(--border); border-radius: 6px; }
-  .cat-english { --tag-bg: var(--tag-english); --tag-c: var(--tag-english-text); }
-  .cat-math { --tag-bg: var(--tag-math); --tag-c: var(--tag-math-text); }
-  .cat-science { --tag-bg: var(--tag-science); --tag-c: var(--tag-science-text); }
-  .cat-ss { --tag-bg: var(--tag-ss); --tag-c: var(--tag-ss-text); }
-  .cat-lote { --tag-bg: var(--tag-lote); --tag-c: var(--tag-lote-text); }
-  .cat-fine { --tag-bg: var(--tag-fine); --tag-c: var(--tag-fine-text); }
-  .cat-pe { --tag-bg: var(--tag-pe); --tag-c: var(--tag-pe-text); }
-  .cat-elective { --tag-bg: var(--tag-elective); --tag-c: var(--tag-elective-text); }
-  .tag { background: var(--tag-bg, #f3f4f6); color: var(--tag-c, var(--muted)); }
-  .placed-card .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tag-bg, #d1d5db); flex-shrink: 0; margin-top: 4px; }
-  .drag-ghost { position: fixed; top: -1000px; left: -1000px; background: var(--surface); border: 1.5px solid var(--accent); border-radius: var(--radius); padding: 8px 12px; font-family: 'DM Sans', sans-serif; font-size: .82rem; font-weight: 500; box-shadow: var(--shadow-drag); pointer-events: none; z-index: 9999; max-width: 220px; }
-  .empty-state { text-align: center; color: var(--muted); font-size: .82rem; padding: 20px; }
-  @media (max-width: 900px) { .app { grid-template-columns: 1fr; height: auto; } .sidebar { height: 300px; } .grade-grid { grid-template-columns: repeat(2,1fr); } }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rockwall-Heath Course Planner 2026–27</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* ─── Design Tokens ──────────────────────────────────────────── */
+    :root {
+      --bg:           #f7f5f0;
+      --surface:      #ffffff;
+      --border:       #e2ddd6;
+      --text:         #1a1714;
+      --muted:        #8a8278;
+      --accent:       #1a5c3a;
+      --accent-light: #eaf3ee;
+      --accent2:      #c8471e;
+
+      /* Category tag colors */
+      --tag-english: #dbeafe;  --tag-english-text: #1e40af;
+      --tag-math:    #fef3c7;  --tag-math-text:    #92400e;
+      --tag-science: #d1fae5;  --tag-science-text: #065f46;
+      --tag-ss:      #fce7f3;  --tag-ss-text:      #9d174d;
+      --tag-lote:    #ede9fe;  --tag-lote-text:    #5b21b6;
+      --tag-elective:#ffedd5;  --tag-elective-text:#9a3412;
+      --tag-fine:    #fdf4ff;  --tag-fine-text:    #7e22ce;
+      --tag-pe:      #ecfdf5;  --tag-pe-text:      #064e3b;
+
+      --shadow:      0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.05);
+      --shadow-drag: 0 8px 30px rgba(0,0,0,.15);
+      --radius:      8px;
+    }
+
+    /* ─── Reset ──────────────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────────── */
+    header {
+      background: var(--text);
+      color: #fff;
+      padding: 18px 28px;
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.35rem;
+      letter-spacing: -.01em;
+    }
+
+    header span {
+      font-family: 'DM Mono', monospace;
+      font-size: .72rem;
+      color: #9ca3af;
+      letter-spacing: .05em;
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    /* ─── Buttons ────────────────────────────────────────────────── */
+    .btn {
+      padding: 7px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .8rem;
+      font-weight: 500;
+      transition: all .15s;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: #d1d5db;
+      border: 1px solid #374151;
+    }
+    .btn-outline:hover {
+      border-color: #9ca3af;
+      color: #fff;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #156b45;
+    }
+
+    /* ─── App Layout ─────────────────────────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-columns: 310px 1fr;
+      height: calc(100vh - 57px);
+    }
+
+    /* ─── Sidebar ────────────────────────────────────────────────── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 16px 18px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-header h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    /* Search input */
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 12px 8px 32px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .82rem;
+      background: var(--bg);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .search-wrap input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* Category filter pills */
+    .filter-tabs {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filter-tab {
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .72rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .12s;
+      white-space: nowrap;
+    }
+    .filter-tab.active,
+    .filter-tab:hover {
+      background: var(--text);
+      color: #fff;
+      border-color: var(--text);
+    }
+
+    /* Scrollable course list */
+    .course-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .course-list::-webkit-scrollbar { width: 4px; }
+    .course-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* ─── Course Cards (sidebar) ─────────────────────────────────── */
+    .course-card {
+      padding: 9px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: grab;
+      transition: all .15s;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .course-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow);
+      transform: translateY(-1px);
+    }
+    .course-card.dragging { opacity: .4; cursor: grabbing; }
+    .course-card.placed   { opacity: .45; background: var(--bg); cursor: default; }
+
+    .course-name {
+      font-size: .82rem;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    .course-meta {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* Small colored pill tag */
+    .tag {
+      font-family: 'DM Mono', monospace;
+      font-size: .65rem;
+      padding: 1px 7px;
+      border-radius: 20px;
+      white-space: nowrap;
+      /* color set by .cat-* classes below */
+      background: var(--tag-bg, #f3f4f6);
+      color: var(--tag-c, var(--muted));
+    }
+
+    .grade-tag {
+      font-size: .65rem;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ─── Planner (main area) ────────────────────────────────────── */
+    .planner {
+      overflow: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .planner-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .planner-top h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.15rem;
+    }
+
+    /* Credit summary pills in header */
+    .credit-summary {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
+    .credit-pill {
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: .72rem;
+      font-family: 'DM Mono', monospace;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .credit-pill b { color: var(--accent); }
+
+    /* ─── Four-year grade grid ───────────────────────────────────── */
+    .grade-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .grade-col {
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .grade-col-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .grade-col-header h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1rem;
+    }
+
+    .grade-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: .65rem;
+      color: var(--muted);
+    }
+
+    .credits-count {
+      margin-left: auto;
+      font-family: 'DM Mono', monospace;
+      font-size: .7rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Drop zone inside each grade column */
+    .drop-zone {
+      padding: 10px;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: background .15s;
+    }
+    .drop-zone.drag-over {
+      background: var(--accent-light);
+      border-radius: 8px;
+    }
+
+    /* Placeholder shown when a column is empty */
+    .drop-hint {
+      color: var(--muted);
+      font-size: .72rem;
+      text-align: center;
+      padding: 12px 0;
+      border: 1.5px dashed var(--border);
+      border-radius: 6px;
+    }
+
+    /* ─── Placed Course Cards (inside grade columns) ─────────────── */
+    .placed-card {
+      padding: 8px 11px;
+      border-radius: 7px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      cursor: grab;
+      transition: all .15s;
+      user-select: none;
+      animation: pop-in .2s ease;
+    }
+
+    @keyframes pop-in {
+      from { transform: scale(.9); opacity: 0; }
+      to   { transform: scale(1);  opacity: 1; }
+    }
+
+    .placed-card:hover    { border-color: var(--accent2); background: #fff8f7; }
+    .placed-card.dragging { opacity: .3; }
+
+    /* Color dot on the left of each placed card */
+    .placed-card .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--tag-bg, #d1d5db);
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .placed-name {
+      font-size: .78rem;
+      font-weight: 500;
+      line-height: 1.3;
+      flex: 1;
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 0;
+      line-height: 1;
+      transition: color .1s;
+      flex-shrink: 0;
+    }
+    .remove-btn:hover { color: var(--accent2); }
+
+    /* ─── Category Color Classes ─────────────────────────────────── */
+    /* Each .cat-* class sets the two CSS variables used by .tag and .dot */
+    .cat-english  { --tag-bg: var(--tag-english);  --tag-c: var(--tag-english-text);  }
+    .cat-math     { --tag-bg: var(--tag-math);     --tag-c: var(--tag-math-text);     }
+    .cat-science  { --tag-bg: var(--tag-science);  --tag-c: var(--tag-science-text);  }
+    .cat-ss       { --tag-bg: var(--tag-ss);       --tag-c: var(--tag-ss-text);       }
+    .cat-lote     { --tag-bg: var(--tag-lote);     --tag-c: var(--tag-lote-text);     }
+    .cat-fine     { --tag-bg: var(--tag-fine);     --tag-c: var(--tag-fine-text);     }
+    .cat-pe       { --tag-bg: var(--tag-pe);       --tag-c: var(--tag-pe-text);       }
+    .cat-elective { --tag-bg: var(--tag-elective); --tag-c: var(--tag-elective-text); }
+
+    /* ─── Drag Ghost ─────────────────────────────────────────────── */
+    /* Invisible element used as the custom drag image */
+    .drag-ghost {
+      position: fixed;
+      top: -1000px;
+      left: -1000px;
+      background: var(--surface);
+      border: 1.5px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .82rem;
+      font-weight: 500;
+      box-shadow: var(--shadow-drag);
+      pointer-events: none;
+      z-index: 9999;
+      max-width: 220px;
+    }
+
+    /* ─── Misc ───────────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      font-size: .82rem;
+      padding: 20px;
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .app        { grid-template-columns: 1fr; height: auto; }
+      .sidebar    { height: 300px; }
+      .grade-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
 </head>
 <body>
-<header>
-  <h1>Rockwall-Heath Course Planner</h1>
-  <span>2026–2027 APG · Heath Campus</span>
-  <div class="header-actions">
-    <button class="btn btn-outline" onclick="clearAll()">Clear All</button>
-    <button class="btn btn-primary" onclick="savePlan()">Save Plan</button>
-  </div>
-</header>
-<div class="app">
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <h2>Available Courses</h2>
-      <div class="search-wrap">
-        <span class="search-icon">⌕</span>
-        <input type="text" id="search" placeholder="Search courses…" oninput="filterCourses()">
+
+  <!-- ════════════════════════════════════════════════════════════════
+       HEADER
+  ════════════════════════════════════════════════════════════════ -->
+  <header>
+    <h1>Rockwall-Heath Course Planner</h1>
+    <span>2026–2027 APG · Heath Campus</span>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="clearAll()">Clear All</button>
+      <button class="btn btn-primary" onclick="savePlan()">Save Plan</button>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       APP SHELL  (sidebar + planner)
+  ════════════════════════════════════════════════════════════════ -->
+  <div class="app">
+
+    <!-- ── Sidebar: searchable course list ── -->
+    <aside class="sidebar">
+
+      <div class="sidebar-header">
+        <h2>Available Courses</h2>
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input
+            type="text"
+            id="search"
+            placeholder="Search courses…"
+            oninput="filterCourses()"
+          />
+        </div>
       </div>
-    </div>
-    <div class="filter-tabs">
-      <button class="filter-tab active" data-cat="all" onclick="setCat('all',this)">All</button>
-      <button class="filter-tab" data-cat="english" onclick="setCat('english',this)">English</button>
-      <button class="filter-tab" data-cat="math" onclick="setCat('math',this)">Math</button>
-      <button class="filter-tab" data-cat="science" onclick="setCat('science',this)">Science</button>
-      <button class="filter-tab" data-cat="ss" onclick="setCat('ss',this)">Social Studies</button>
-      <button class="filter-tab" data-cat="lote" onclick="setCat('lote',this)">LOTE</button>
-      <button class="filter-tab" data-cat="fine" onclick="setCat('fine',this)">Fine Arts</button>
-      <button class="filter-tab" data-cat="pe" onclick="setCat('pe',this)">PE</button>
-      <button class="filter-tab" data-cat="elective" onclick="setCat('elective',this)">CTE/Elective</button>
-    </div>
-    <div class="course-list" id="courseList"></div>
-  </aside>
-  <main class="planner">
-    <div class="planner-top">
-      <h2>Four-Year Plan</h2>
-      <div class="credit-summary" id="creditSummary"></div>
-    </div>
-    <div class="grade-grid" id="gradeGrid"></div>
-  </main>
-</div>
-<div class="drag-ghost" id="dragGhost"></div>
-<script>
-const CAT_LABELS = {english:'English',math:'Math',science:'Science',ss:'Social Studies',lote:'LOTE',fine:'Fine Arts',pe:'PE/Athletics',elective:'CTE/Elective'};
-const GRADES = [9,10,11,12];
-const GRADE_NAMES = {9:'9th Grade',10:'10th Grade',11:'11th Grade',12:'12th Grade'};
 
-const COURSES = [
-  // ── ENGLISH ──
-  {id:'e1',name:'English I',cat:'english',grades:[9],credits:1},
-  {id:'e1h',name:'English I Honors',cat:'english',grades:[9],credits:1},
-  {id:'e1sg',name:'English I SAGE Honors',cat:'english',grades:[9],credits:1},
-  {id:'e1esol',name:'English I/II – ESOL',cat:'english',grades:[9,10,11,12],credits:1},
-  {id:'e2',name:'English II',cat:'english',grades:[10],credits:1},
-  {id:'e2h',name:'English II Honors',cat:'english',grades:[10],credits:1},
-  {id:'e2sg',name:'English II SAGE Honors',cat:'english',grades:[10],credits:1},
-  {id:'e3',name:'English III',cat:'english',grades:[11],credits:1},
-  {id:'e3ap',name:'AP English III (Lang & Comp)',cat:'english',grades:[11],credits:1},
-  {id:'e4',name:'English IV',cat:'english',grades:[12],credits:1},
-  {id:'e4ap',name:'AP English IV (Lit & Comp)',cat:'english',grades:[12],credits:1},
-  {id:'eiblit',name:'IB English: Literature HL (Yr 1&2)',cat:'english',grades:[11,12],credits:2},
-  {id:'eibll',name:'IB English: Lang & Literature HL (Yr 1&2)',cat:'english',grades:[11,12],credits:2},
-  {id:'e1301',name:'ENGL 1301 Composition I (Dual Credit)',cat:'english',grades:[11,12],credits:0.5},
-  {id:'e1302',name:'ENGL 1302 Composition II (Dual Credit)',cat:'english',grades:[11,12],credits:0.5},
-  {id:'e2332',name:'ENGL 2332 World Lit I (Dual Credit)',cat:'english',grades:[12],credits:0.5},
-  {id:'e2333',name:'ENGL 2333 World Lit II (Dual Credit)',cat:'english',grades:[12],credits:0.5},
-  {id:'eap_sem',name:'AP Seminar',cat:'english',grades:[10,11,12],credits:1},
-  {id:'eap_res',name:'AP Research',cat:'english',grades:[11,12],credits:1},
-  {id:'ecreate',name:'Creative/Imaginative Writing',cat:'english',grades:[10,11,12],credits:1},
-  {id:'eresearch',name:'Research and Technical Writing',cat:'english',grades:[11,12],credits:1},
-  {id:'epractwrite',name:'Practical Writing Skills',cat:'english',grades:[9,10,11],credits:1},
-  {id:'eread',name:'Reading I–III',cat:'english',grades:[9,10,11,12],credits:1},
-  {id:'ecollread',name:'College Readiness and Study Skills',cat:'english',grades:[9,10,11,12],credits:0.5},
-  {id:'ecpela',name:'College Prep: English Language Arts',cat:'english',grades:[12],credits:1},
-  // ── JOURNALISM / SPEECH ──
-  {id:'j1',name:'Beginning Journalism',cat:'elective',grades:[9,10,11,12],credits:0.5},
-  {id:'jphoto',name:'Photojournalism',cat:'elective',grades:[9,10,11,12],credits:0.5},
-  {id:'debate1',name:'Debate I',cat:'elective',grades:[9,10,11,12],credits:1},
-  {id:'debate2',name:'Debate II',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'debate3',name:'Debate III',cat:'elective',grades:[11,12],credits:1},
-  {id:'jprofcomm',name:'Professional Communications',cat:'elective',grades:[9,10,11,12],credits:0.5},
-  {id:'jnews',name:'Adv Journalism: Newspaper Production I–III',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'jyear',name:'Adv Journalism: Yearbook Production I–III',cat:'elective',grades:[10,11,12],credits:1},
-  // ── MATH ──
-  {id:'m_alg1',name:'Algebra I',cat:'math',grades:[9],credits:1},
-  {id:'m_alglab',name:'Algebra Lab (Strategic Learning)',cat:'math',grades:[9,10,11,12],credits:1},
-  {id:'m_geo',name:'Geometry',cat:'math',grades:[9,10],credits:1},
-  {id:'m_geoh',name:'Geometry Honors',cat:'math',grades:[9,10],credits:1},
-  {id:'m_algr',name:'Algebraic Reasoning',cat:'math',grades:[11],credits:1},
-  {id:'m_alg2',name:'Algebra II',cat:'math',grades:[10,11,12],credits:1},
-  {id:'m_alg2h',name:'Algebra II Honors',cat:'math',grades:[9,10,11],credits:1},
-  {id:'m_alg2or',name:'OnRamps Algebra II Honors (Dual Enrollment)',cat:'math',grades:[9,10,11],credits:1},
-  {id:'m_extalg',name:'Extended Algebra Concepts',cat:'math',grades:[11,12],credits:1},
-  {id:'m_precalc',name:'Precalculus',cat:'math',grades:[11,12],credits:1},
-  {id:'m_precalch',name:'Precalculus Honors',cat:'math',grades:[10,11,12],credits:1},
-  {id:'m_precalcor',name:'OnRamps Precalculus Honors (Dual Enrollment)',cat:'math',grades:[10,11,12],credits:1},
-  {id:'m_calcab',name:'AP Calculus AB',cat:'math',grades:[11,12],credits:1},
-  {id:'m_calcbc',name:'AP Calculus BC',cat:'math',grades:[11,12],credits:1},
-  {id:'m_stats',name:'AP Statistics',cat:'math',grades:[11,12],credits:1},
-  {id:'m_statsor',name:'OnRamps Statistics Honors (Dual Enrollment)',cat:'math',grades:[11,12],credits:1},
-  {id:'m_ibapp',name:'IB Math: Applications & Interpretation HL (Yr 1&2)',cat:'math',grades:[11,12],credits:2},
-  {id:'m_ibana',name:'IB Math: Analysis & Approaches HL (Yr 1&2)',cat:'math',grades:[11,12],credits:2},
-  {id:'m_calg',name:'MATH 1314 College Algebra (Dual Credit)',cat:'math',grades:[12],credits:0.5},
-  {id:'m_estats',name:'MATH 1342 Elementary Statistics (Dual Credit)',cat:'math',grades:[12],credits:0.5},
-  {id:'m_calc3',name:'MATH 2415 Calculus III (Dual Credit)',cat:'math',grades:[12],credits:0.5},
-  {id:'m_diffeq',name:'MATH 2320 Differential Equations (Dual Credit)',cat:'math',grades:[12],credits:0.5},
-  {id:'m_finmath',name:'Financial Mathematics (math credit)',cat:'math',grades:[11,12],credits:1},
-  {id:'m_statsbus',name:'Statistics & Business Decision-Making (math credit)',cat:'math',grades:[11,12],credits:1},
-  {id:'m_acct2',name:'Accounting II (math credit)',cat:'math',grades:[11,12],credits:1},
-  {id:'m_robo2',name:'Robotics II (math credit)',cat:'math',grades:[10,11,12],credits:1},
-  {id:'m_mfg2',name:'Manufacturing Engineering Technology II (math credit)',cat:'math',grades:[11,12],credits:1, ibc: 1},
-  {id:'m_cpmat',name:'College Prep: Mathematics',cat:'math',grades:[12],credits:1},
-  // ── SCIENCE ──
-  {id:'sci_bio',name:'Biology',cat:'science',grades:[9,10],credits:1},
-  {id:'sci_bioh',name:'Biology Honors',cat:'science',grades:[9,10],credits:1},
-  {id:'sci_biosg',name:'Biology Honors SAGE',cat:'science',grades:[9],credits:1},
-  {id:'sci_ipc',name:'Integrated Physics & Chemistry (IPC)',cat:'science',grades:[10],credits:1},
-  {id:'sci_chemh',name:'Chemistry Honors',cat:'science',grades:[10],credits:1},
-  {id:'sci_chem',name:'Chemistry',cat:'science',grades:[10,11,12],credits:1},
-  {id:'sci_phys',name:'Physics',cat:'science',grades:[10,11,12],credits:1},
-  {id:'sci_aqua',name:'Aquatic Science',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_earth',name:'Earth Systems Science',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_apbio',name:'AP Biology',cat:'science',grades:[10,11,12],credits:1},
-  {id:'sci_apphys1',name:'AP Physics I',cat:'science',grades:[10,11,12],credits:1},
-  {id:'sci_apphys2',name:'AP Physics II',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_apchem',name:'AP Chemistry',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_appmc',name:'AP Physics C: Mechanics',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_appe',name:'AP Physics C: Electricity & Magnetism',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_apenv',name:'AP Environmental Science',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_orgeo',name:'OnRamps Geoscience (Dual Enrollment)',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_ibbio',name:'IB Biology SL',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_ibphys',name:'IB Physics SL',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_ibenv',name:'IB Environmental Systems & Societies SL',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_anat',name:'Anatomy and Physiology (science credit)',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_foren',name:'Forensic Science (science credit)',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_food',name:'Food Science (science credit)',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_applphys',name:'Applied Physics (physics credit)',cat:'science',grades:[10,11,12],credits:1},
-  {id:'sci_uav1',name:'Unmanned Aerial Vehicles (UAV) I (science credit)',cat:'science',grades:[10,11,12],credits:1},
-  {id:'sci_advanim',name:'Advanced Animal Science (science credit)',cat:'science',grades:[11,12],credits:1},
-  {id:'sci_aerospace',name:'Aerospace I – Scientific Research & Design (science)',cat:'science',grades:[11,12],credits:1},
-  // ── SOCIAL STUDIES ──
-  {id:'ss_geo',name:'World Geography Studies',cat:'ss',grades:[9,10,11,12],credits:1},
-  {id:'ss_geoh',name:'World Geography Studies Honors',cat:'ss',grades:[9,10,11,12],credits:1},
-  {id:'ss_aphug',name:'AP Human Geography',cat:'ss',grades:[9],credits:1},
-  {id:'ss_wh',name:'World History Studies',cat:'ss',grades:[10,11,12],credits:1},
-  {id:'ss_apwh',name:'AP World History: Modern',cat:'ss',grades:[10,11,12],credits:1},
-  {id:'ss_apeu',name:'AP European History',cat:'ss',grades:[10,11,12],credits:1},
-  {id:'ss_us',name:'U.S. History Studies Since 1877',cat:'ss',grades:[11],credits:1},
-  {id:'ss_apus',name:'AP United States History',cat:'ss',grades:[11],credits:1},
-  {id:'ss_hist1',name:'HIST 1301 U.S. History I (Dual Credit)',cat:'ss',grades:[11],credits:0.5},
-  {id:'ss_hist2',name:'HIST 1302 U.S. History II (Dual Credit)',cat:'ss',grades:[11],credits:0.5},
-  {id:'ss_gov',name:'U.S. Government',cat:'ss',grades:[12],credits:0.5},
-  {id:'ss_apgov',name:'AP U.S. Government & Politics',cat:'ss',grades:[12],credits:0.5},
-  {id:'ss_econ',name:'Economics w/ Emphasis on Free Enterprise',cat:'ss',grades:[12],credits:0.5},
-  {id:'ss_pfl',name:'Personal Financial Literacy',cat:'ss',grades:[12],credits:0.5},
-  {id:'ss_pfle',name:'Personal Financial Literacy & Economics',cat:'ss',grades:[12],credits:0.5},
-  {id:'ss_apmacro',name:'AP Macroeconomics',cat:'ss',grades:[12],credits:0.5},
-  {id:'ss_apmicro',name:'AP Microeconomics',cat:'ss',grades:[12],credits:0.5},
-  {id:'ss_ibhist',name:'IB History HL (Yr 1&2)',cat:'ss',grades:[11,12],credits:2},
-  {id:'ss_psych',name:'Psychology',cat:'ss',grades:[10,11,12],credits:0.5},
-  {id:'ss_sttop',name:'Special Topics in Social Studies: Psychology',cat:'ss',grades:[10,11,12],credits:0.5},
-  {id:'ss_appsych',name:'AP Psychology',cat:'ss',grades:[10,11,12],credits:0.5},
-  {id:'ss_socio',name:'Sociology',cat:'ss',grades:[10,11,12],credits:0.5},
-  {id:'ss_ibphil',name:'IB Philosophy SL',cat:'ss',grades:[11,12],credits:1},
-  {id:'ss_govt_dc',name:'GOVT 2305 Federal Government (Dual Credit)',cat:'ss',grades:[12],credits:0.5},
-  {id:'ss_econ_dc',name:'ECON 2301 Macroeconomics (Dual Credit)',cat:'ss',grades:[12],credits:0.5},
-  // ── LOTE ──
-  {id:'lot_sp1',name:'Spanish I',cat:'lote',grades:[9,10,11,12],credits:1},
-  {id:'lot_sp1ns',name:'Spanish I for Native Speakers',cat:'lote',grades:[9,10,11],credits:1},
-  {id:'lot_sp2',name:'Spanish II',cat:'lote',grades:[9,10,11,12],credits:1},
-  {id:'lot_sp2h',name:'Spanish II Honors',cat:'lote',grades:[9,10,11,12],credits:1},
-  {id:'lot_sp2ns',name:'Spanish II Honors for Native Speakers',cat:'lote',grades:[9,10,11,12],credits:1},
-  {id:'lot_sp3',name:'Spanish III Honors',cat:'lote',grades:[10,11,12],credits:1},
-  {id:'lot_sp4',name:'AP Spanish IV (Lang & Culture)',cat:'lote',grades:[11,12],credits:1},
-  {id:'lot_sp5',name:'AP Spanish V (Literature)',cat:'lote',grades:[11,12],credits:1},
-  {id:'lot_ibspai',name:'IB Spanish ab initio (Yr 1&2)',cat:'lote',grades:[11,12],credits:2},
-  {id:'lot_ibsp1',name:'IB Spanish B SL Year 1',cat:'lote',grades:[11,12],credits:1},
-  {id:'lot_ibsp2',name:'IB Spanish B SL Year 2',cat:'lote',grades:[12],credits:1},
-  {id:'lot_fr1',name:'French I',cat:'lote',grades:[9,10,11,12],credits:1},
-  {id:'lot_fr2',name:'French II',cat:'lote',grades:[10,11,12],credits:1},
-  {id:'lot_fr2h',name:'French II Honors',cat:'lote',grades:[10,11,12],credits:1},
-  {id:'lot_fr3',name:'French III Honors',cat:'lote',grades:[11,12],credits:1},
-  {id:'lot_fr4',name:'AP French IV (Lang & Culture)',cat:'lote',grades:[11,12],credits:1},
-  {id:'lot_ibfrai',name:'IB French ab initio (Yr 1&2)',cat:'lote',grades:[11,12],credits:2},
-  {id:'lot_ibfr1',name:'IB French B SL Year 1',cat:'lote',grades:[11,12],credits:1},
-  {id:'lot_ibfr2',name:'IB French B SL Year 2',cat:'lote',grades:[12],credits:1},
-  {id:'lot_asl1',name:'American Sign Language (ASL) I',cat:'lote',grades:[9,10,11,12],credits:1},
-  {id:'lot_asl2',name:'American Sign Language (ASL) II',cat:'lote',grades:[10,11,12],credits:1},
-  {id:'lot_asl3',name:'American Sign Language (ASL) III',cat:'lote',grades:[11,12],credits:1},
-  {id:'lot_asl4',name:'American Sign Language (ASL) IV',cat:'lote',grades:[11,12],credits:1},
-  {id:'lot_cs1h',name:'Computer Science I Honors (LOTE credit)',cat:'lote',grades:[9,10,11,12],credits:1},
-  {id:'lot_csp',name:'AP Computer Science Principles (LOTE credit)',cat:'lote',grades:[9,10,11,12],credits:1},
-  {id:'lot_csa',name:'AP Computer Science A (LOTE + math credit)',cat:'lote',grades:[10,11,12],credits:2},
-  {id:'lot_cs3',name:'Computer Science III (LOTE credit)',cat:'lote',grades:[11,12],credits:1, ibc: 1},
-  // ── IB ONLY ──
-  {id:'ib_tok',name:'IB Theory of Knowledge',cat:'elective',grades:[11,12],credits:1},
-  {id:'ib_res1',name:'IB Research Year 1',cat:'elective',grades:[11],credits:0.5},
-  {id:'ib_res2',name:'IB Research Year 2',cat:'elective',grades:[12],credits:0.5},
-  // ── FINE ARTS – MUSIC ──
-  {id:'fa_band_nv',name:'Band – Non-Varsity I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_band_v',name:'Band – Varsity I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_band_perc',name:'Percussion Ensemble I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_jazz',name:'Jazz Band I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_ipe',name:'Instrumental Performance Ensemble I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_choir_nv',name:'Choir – Non-Varsity I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_choir_v',name:'Choir – Varsity Mixed I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_choir_ac',name:'A Capella Choir I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_orch_nv',name:'Orchestra – Non-Varsity I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_orch_v',name:'Orchestra – Varsity I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_chamber',name:'Chamber Ensemble I–IV',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_piano1',name:'Piano Performance I',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_piano2',name:'Piano Performance II–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_ibmus',name:'IB Music SL (Yr 1&2)',cat:'fine',grades:[11,12],credits:2},
-  {id:'fa_apmus',name:'AP Music Theory',cat:'fine',grades:[10,11,12],credits:1},
-  // ── FINE ARTS – VISUAL ARTS ──
-  {id:'fa_art1',name:'Art I',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_art2draw',name:'Art II–IV Drawing',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_art2paint',name:'Art II–IV Painting',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_art2ceram',name:'Art II–IV Ceramics',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_art2sculpt',name:'Art II–IV Sculpture (3-D)',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_art2print',name:'Art II–IV Printmaking',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_art3digi',name:'Art III–IV Digital Illustration',cat:'fine',grades:[11,12],credits:1},
-  {id:'fa_portart1',name:'Portfolio Art I Honors',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_portart2',name:'Portfolio Art II Honors (2-D or 3-D)',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_portart3',name:'Portfolio Art III Honors (2-D or 3-D)',cat:'fine',grades:[11,12],credits:1},
-  {id:'fa_apdraw',name:'AP Studio Art Drawing',cat:'fine',grades:[11,12],credits:1},
-  {id:'fa_ap2d',name:'AP Studio Art 2-D Design',cat:'fine',grades:[11,12],credits:1},
-  {id:'fa_ap3d',name:'AP Studio Art 3-D Design',cat:'fine',grades:[11,12],credits:1},
-  {id:'fa_arthistap',name:'AP Art History',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_ibva',name:'IB Visual Arts SL/HL',cat:'fine',grades:[11,12],credits:1},
-  {id:'fa_ibfilm',name:'IB Film SL',cat:'fine',grades:[11,12],credits:1},
-  // ── FINE ARTS – THEATRE ──
-  {id:'fa_theat1',name:'Studio Theatre I',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_theat2',name:'Studio Theatre II–IV',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_mustheat1',name:'Musical Theatre I',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_mustheat2',name:'Musical Theatre II–IV',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_theat9',name:'9th Grade Theatre Production I',cat:'fine',grades:[9],credits:1},
-  {id:'fa_theatjv',name:'JV Theatre Production II–IV',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_theatv',name:'Varsity Theatre Production I–IV',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_techtheat1',name:'Technical Theatre I',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_techtheat2',name:'Technical Theatre II–IV',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_pac',name:'Performing Arts Center Management',cat:'fine',grades:[10,11,12],credits:1},
-  // ── FINE ARTS – DANCE ──
-  {id:'fa_dance1',name:'Principles of Dance I',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_dance2',name:'Principles of Dance II–IV',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_danceperf',name:'Dance Performance Ensemble / Drill Team I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_danceimp',name:'Dance I–III Composition & Improvisation',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_danceflag',name:'Dance Flag Performance I–IV',cat:'fine',grades:[9,10,11,12],credits:1},
-  {id:'fa_floralart',name:'Floral Design (Fine Arts credit)',cat:'fine',grades:[10,11,12],credits:1},
-  {id:'fa_digianim',name:'Digital Art & Animation (Fine Arts credit)',cat:'fine',grades:[10,11,12],credits:1},
-  // ── PE / ATHLETICS ──
-  {id:'pe_pe',name:'Physical Education',cat:'pe',grades:[9,10,11,12],credits:1},
-  {id:'pe_athl',name:'Athletics I–IV',cat:'pe',grades:[9,10,11,12],credits:1},
-  {id:'pe_health',name:'Health',cat:'pe',grades:[9,10,11,12],credits:0.5},
-  {id:'pe_jrotc',name:'JROTC Year I (also PE credit)',cat:'pe',grades:[9,10,11,12],credits:1},
-  // ── CTE / ELECTIVES ──
-  // Agriculture
-  {id:'cte_agri1',name:'Principles of Agriculture, Food & Natural Resources',cat:'elective',grades:[9],credits:1},
-  {id:'cte_agrmech',name:'Agricultural Mechanics & Metal Technologies',cat:'elective',grades:[10,11],credits:1, ibc: 1},
-  {id:'cte_agrpower',name:'Agricultural Power Systems',cat:'elective',grades:[11],credits:2, ibc: 1},
-  {id:'cte_agrfab',name:'Agricultural Equipment Design & Fabrication',cat:'elective',grades:[11,12],credits:1, ibc: 1},
-  {id:'cte_agprac',name:'Practicum in Agriculture (Technology)',cat:'elective',grades:[12],credits:2, ibc: 1},
-  {id:'cte_floral1',name:'Floral Design',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
-  {id:'cte_floral2',name:'Advanced Floral Design',cat:'elective',grades:[11,12],credits:1, ibc: 1},
-  {id:'cte_floralprac',name:'Practicum in Floral Design',cat:'elective',grades:[12],credits:2, ibc: 1},
-  {id:'cte_equine',name:'Equine Science',cat:'elective',grades:[10,11],credits:0.5, ibc: 1},
-  {id:'cte_smallanim',name:'Small Animal Management',cat:'elective',grades:[10,11],credits:0.5},
-  {id:'cte_livestock',name:'Livestock & Poultry Production',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
-  {id:'cte_vetsci',name:'Veterinary Science',cat:'elective',grades:[11],credits:1, ibc: 1},
-  {id:'cte_vetprac',name:'Practicum in Veterinary Medicine',cat:'elective',grades:[12],credits:2, ibc: 1},
-  // Architecture
-  {id:'cte_arch1',name:'Principles of Architecture',cat:'elective',grades:[9],credits:1},
-  {id:'cte_arch2',name:'Architectural Design I',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_arch3',name:'Architectural Design II',cat:'elective',grades:[11,12],credits:2, ibc: 1},
-  {id:'cte_archprac',name:'Practicum in Architectural Design',cat:'elective',grades:[12],credits:2},
-  // AAVTC
-  {id:'cte_aavtc1',name:'Principles of Arts, A/V Tech & Communications',cat:'elective',grades:[9],credits:1},
-  {id:'cte_anim1',name:'Animation I',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_anim2',name:'Animation II with Lab',cat:'elective',grades:[11,12],credits:2, ibc: 1},
-  {id:'cte_animp',name:'Practicum in Animation',cat:'elective',grades:[12],credits:2},
-  {id:'cte_avp1',name:'Audio/Video Production I',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_avp2',name:'Audio/Video Production II with Lab',cat:'elective',grades:[11,12],credits:2, ibc: 1},
-  {id:'cte_avpp',name:'Practicum in Audio/Video Production',cat:'elective',grades:[12],credits:2, ibc: 1},
-  {id:'cte_fashion1',name:'Fashion Design I',cat:'elective',grades:[9],credits:1},
-  {id:'cte_fashion2',name:'Fashion Design II with Lab',cat:'elective',grades:[10,11],credits:2},
-  {id:'cte_fashionp',name:'Practicum in Fashion Design I',cat:'elective',grades:[11,12],credits:2},
-  {id:'cte_gdi1',name:'Graphic Design & Illustration I',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
-  {id:'cte_gdi2',name:'Graphic Design & Illustration II with Lab',cat:'elective',grades:[11,12],credits:2, ibc: 1},
-  {id:'cte_gdip',name:'Practicum in Graphic Design & Illustration',cat:'elective',grades:[12],credits:2, ibc: 1},
-  {id:'cte_photo1',name:'Commercial Photography I',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_photo2',name:'Commercial Photography II with Lab',cat:'elective',grades:[11,12],credits:2, ibc: 1},
-  {id:'cte_photop',name:'Practicum in Commercial Photography',cat:'elective',grades:[12],credits:2},
-  {id:'cte_vgd1',name:'Video Game Design',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_vgd2',name:'Video Game Programming',cat:'elective',grades:[11,12],credits:1},
-  {id:'cte_vgd3',name:'Advanced Video Game Programming',cat:'elective',grades:[12],credits:1, ibc: 1},
-  // Business / Marketing / Finance
-  {id:'cte_bus1',name:'Principles of Business, Marketing & Finance',cat:'elective',grades:[9,10],credits:1},
-  {id:'cte_money',name:'Money Matters',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_acct1',name:'Accounting I',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
-  {id:'cte_entrep',name:'Entrepreneurship',cat:'elective',grades:[11,12],credits:1, ibc: 1},
-  {id:'cte_bustech1',name:'Foundations of Business Communication & Technologies',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_bustech2',name:'Business Communication & Technologies II',cat:'elective',grades:[11,12],credits:1, ibc: 1},
-  {id:'cte_busmgmt',name:'Business Management',cat:'elective',grades:[10,11],credits:1, ibc: 1},
-  {id:'cte_vbiz',name:'Virtual Business',cat:'elective',grades:[11,12],credits:0.5},
-  {id:'cte_hr',name:'Human Resource Management',cat:'elective',grades:[11,12],credits:0.5},
-  {id:'cte_sports_mkt',name:'Sports & Entertainment Marketing',cat:'elective',grades:[10,11],credits:0.5},
-  {id:'cte_social_mkt',name:'Social Media Marketing',cat:'elective',grades:[10,11],credits:0.5},
-  {id:'cte_realty',name:'Fundamentals of Real Estate',cat:'elective',grades:[11],credits:2},
-  {id:'cte_practbus',name:'Practicum in Business Management',cat:'elective',grades:[12],credits:2},
-  {id:'cte_careerprep',name:'Career Preparation for Program of Study',cat:'elective',grades:[12],credits:2},
-  // Engineering
-  {id:'cte_eng1',name:'Engineering Design Process',cat:'elective',grades:[9,10],credits:1},
-  {id:'cte_robo1',name:'Robotics I',cat:'elective',grades:[9,10,11],credits:1},
-  {id:'cte_engdes',name:'Engineering Design & Presentation',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_engdes2',name:'Advanced Engineering Design & Presentation (UT DE)',cat:'elective',grades:[11,12],credits:2, ibc: 1},
-  {id:'cte_progeng',name:'Programming for Engineers',cat:'elective',grades:[11,12],credits:1},
-  {id:'cte_engprac',name:'Practicum in Engineering',cat:'elective',grades:[12],credits:2, ibc: 1},
-  {id:'cte_uav2',name:'UAV II / Drone Program',cat:'elective',grades:[11,12],credits:1, ibc: 1},
-  // IT / Cybersecurity
-  {id:'cte_cyber1',name:'AP CK Cybersecurity',cat:'elective',grades:[9,10,11,12],credits:1, ibc: 1},
-  {id:'cte_cyber2',name:'AP CK Cyber: Networking',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
-  {id:'cte_cybercap',name:'Cybersecurity Capstone',cat:'elective',grades:[11,12],credits:1},
-  // Manufacturing
-  {id:'cte_mfg1',name:'Principles of Manufacturing',cat:'elective',grades:[9,10,11],credits:1},
-  {id:'cte_mfgtech1',name:'Manufacturing Engineering Technology I',cat:'elective',grades:[10,11,12],credits:1, ibc: 1},
-  {id:'cte_mfgprac',name:'Practicum in Manufacturing',cat:'elective',grades:[11,12],credits:2, ibc: 1},
-  // Hospitality / Culinary
-  {id:'cte_cul0',name:'Introduction to Culinary Arts',cat:'elective',grades:[9,10],credits:1},
-  {id:'cte_cul1',name:'Culinary Arts',cat:'elective',grades:[10,11],credits:2, ibc: 1},
-  {id:'cte_cul2',name:'Advanced Culinary Arts',cat:'elective',grades:[11,12],credits:2},
-  {id:'cte_culprac',name:'Practicum in Culinary Arts',cat:'elective',grades:[12],credits:2},
-  // Education & Training
-  {id:'cte_edu1',name:'Principles of Education & Training',cat:'elective',grades:[9],credits:1},
-  {id:'cte_edu2',name:'Technology for Teaching',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_edu3',name:'Instructional Practices',cat:'elective',grades:[11,12],credits:2},
-  {id:'cte_eduprac',name:'Practicum in Education & Training',cat:'elective',grades:[12],credits:2, ibc: 1},
-  // Health Science
-  {id:'cte_medterm',name:'Medical Terminology',cat:'elective',grades:[9],credits:1},
-  {id:'cte_hsci',name:'Health Science Theory',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_pct1',name:'Patient Care Technician I (Dual Credit)',cat:'elective',grades:[11],credits:3},
-  {id:'cte_pct2',name:'Patient Care Technician II (Dual Credit)',cat:'elective',grades:[12],credits:3},
-  {id:'cte_dental1',name:'Dental I – Practicum in Health Science I',cat:'elective',grades:[11],credits:2},
-  {id:'cte_dental2',name:'Dental II – Practicum in Health Science II',cat:'elective',grades:[12],credits:2, ibc: 1},
-  {id:'cte_emtprep',name:'EMT Prep: Medical Disaster Response',cat:'elective',grades:[11],credits:1},
-  {id:'cte_emt',name:'EMT – Practicum in Health Science I',cat:'elective',grades:[12],credits:2, ibc: 1},
-  {id:'cte_pharm',name:'Pharmacology',cat:'elective',grades:[11],credits:1},
-  {id:'cte_pharmprac',name:'Pharmacy Technician – Practicum in Health Science',cat:'elective',grades:[12],credits:2, ibc: 1},
-  {id:'cte_medclin',name:'Medical Clinical – Practicum in Health Science I',cat:'elective',grades:[11],credits:2, ibc: 1},
-  {id:'cte_medintern',name:'Internship – Practicum in Health Science II',cat:'elective',grades:[12],credits:2, ibc: 1},
-  // Law / JROTC
-  {id:'cte_law1',name:'Principles of Law, Public Safety, Corrections & Security',cat:'elective',grades:[9],credits:1},
-  {id:'cte_lawenf1',name:'Law Enforcement I',cat:'elective',grades:[10,11],credits:1},
-  {id:'cte_lawenf2',name:'Law Enforcement II',cat:'elective',grades:[11,12],credits:1, ibc: 1},
-  {id:'cte_legalres',name:'Legal Research',cat:'elective',grades:[10,11],credits:1, ibc: 1},
-  {id:'cte_court',name:'Court Systems & Practices',cat:'elective',grades:[12],credits:1},
-  {id:'cte_crimeinv',name:'Criminal Investigation',cat:'elective',grades:[12],credits:1},
-  {id:'cte_lawprac',name:'Practicum in Law, Public Safety & Security',cat:'elective',grades:[12],credits:2},
-  {id:'cte_jrotc2',name:'JROTC Year II',cat:'elective',grades:[10,11,12],credits:1},
-  {id:'cte_jrotc3',name:'JROTC Year III',cat:'elective',grades:[11,12],credits:1},
-  {id:'cte_jrotc4',name:'JROTC Year IV',cat:'elective',grades:[12],credits:1},
-  // Welding / Auto / HVAC (Dual Credit programs)
-  {id:'cte_weld1',name:'Welding I & II (Dual Credit)',cat:'elective',grades:[11],credits:4},
-  {id:'cte_weld2',name:'Welding III & IV (Dual Credit)',cat:'elective',grades:[12],credits:4},
-  {id:'cte_auto1',name:'Automotive Technology I & II (Dual Credit)',cat:'elective',grades:[12],credits:4},
-  {id:'cte_collision',name:'Auto Collision Technology (Dual Credit)',cat:'elective',grades:[12],credits:4},
-  {id:'cte_hvac1',name:'HVAC I (Dual Credit)',cat:'elective',grades:[11],credits:4},
-  {id:'cte_hvac2',name:'HVAC II (Dual Credit)',cat:'elective',grades:[12],credits:4},
-  // Other
-  {id:'cte_cp1',name:'Career Preparation I',cat:'elective',grades:[11,12],credits:2},
-  {id:'cte_cp2',name:'Career Preparation II',cat:'elective',grades:[12],credits:2},
-  {id:'cte_gen_emp',name:'General Employability Skills',cat:'elective',grades:[9,10,11,12],credits:1},
-];
+      <!-- Category filter tabs -->
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="setCat('all', this)">All</button>
+        <button class="filter-tab" onclick="setCat('english', this)">English</button>
+        <button class="filter-tab" onclick="setCat('math', this)">Math</button>
+        <button class="filter-tab" onclick="setCat('science', this)">Science</button>
+        <button class="filter-tab" onclick="setCat('ss', this)">Social Studies</button>
+        <button class="filter-tab" onclick="setCat('lote', this)">LOTE</button>
+        <button class="filter-tab" onclick="setCat('fine', this)">Fine Arts</button>
+        <button class="filter-tab" onclick="setCat('pe', this)">PE</button>
+        <button class="filter-tab" onclick="setCat('elective', this)">CTE/Elective</button>
+      </div>
 
-let plan = {9:[],10:[],11:[],12:[]};
-let activeFilter = 'all';
-let dragSource = null;
+      <!-- Draggable course cards rendered here by JS -->
+      <div class="course-list" id="courseList"></div>
 
-function init() {
-  try { const s = localStorage.getItem('rh_plan_27'); if (s) plan = JSON.parse(s); } catch(e){}
-  renderSidebar(); renderPlanner(); updateCredits();
-}
+    </aside>
 
-function savePlan() {
-  try { localStorage.setItem('rh_plan_27', JSON.stringify(plan)); showToast('Plan saved!'); } catch(e){ showToast('Could not save.'); }
-}
+    <!-- ── Main planner: four-year grid ── -->
+    <main class="planner">
 
-function clearAll() {
-  if (!confirm('Clear your entire plan?')) return;
-  plan = {9:[],10:[],11:[],12:[]};
-  renderSidebar(); renderPlanner(); updateCredits(); savePlan();
-}
+      <div class="planner-top">
+        <h2>Four-Year Plan</h2>
+        <!-- Credit totals rendered here by JS -->
+        <div class="credit-summary" id="creditSummary"></div>
+      </div>
 
-function showToast(msg) {
-  const t = document.createElement('div');
-  t.textContent = msg;
-  Object.assign(t.style, {position:'fixed',bottom:'24px',right:'24px',background:'#1a1714',color:'#fff',padding:'10px 18px',borderRadius:'8px',fontFamily:"'DM Sans',sans-serif",fontSize:'.82rem',boxShadow:'0 4px 16px rgba(0,0,0,.2)',zIndex:9999,transition:'opacity .3s'});
-  document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 1800);
-}
+      <!-- Grade columns (9–12) rendered here by JS -->
+      <div class="grade-grid" id="gradeGrid"></div>
 
-function setCat(cat, el) {
-  activeFilter = cat;
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  filterCourses();
-}
+    </main>
 
-function filterCourses() { renderSidebar(document.getElementById('search').value.toLowerCase().trim()); }
+  </div><!-- /.app -->
 
-function getPlacedIds() { return new Set([...plan[9],...plan[10],...plan[11],...plan[12]]); }
+  <!-- Hidden element used as the custom drag image -->
+  <div class="drag-ghost" id="dragGhost"></div>
 
-function renderSidebar(q='') {
-  const list = document.getElementById('courseList');
-  const placed = getPlacedIds();
-  let courses = COURSES.filter(c => {
-    if (activeFilter !== 'all' && c.cat !== activeFilter) return false;
-    if (q && !c.name.toLowerCase().includes(q)) return false;
-    return true;
-  });
-  courses.sort((a,b) => {
-    const ap=placed.has(a.id), bp=placed.has(b.id);
-    if (ap!==bp) return ap?1:-1;
-    return a.name.localeCompare(b.name);
-  });
-  list.innerHTML = '';
-  if (!courses.length) { list.innerHTML='<div class="empty-state">No courses found.</div>'; return; }
-  courses.forEach(c => {
-    const isPlaced = placed.has(c.id);
-    const div = document.createElement('div');
-    div.className = `course-card cat-${c.cat}${isPlaced?' placed':''}`;
-    div.draggable = !isPlaced;
-    div.dataset.id = c.id;
-    div.innerHTML = `<div class="course-name">${c.name}</div><div class="course-meta"><span class="tag">${CAT_LABELS[c.cat]}</span><span class="grade-tag">Gr ${c.grades.join(', ')} · ${c.credits} cr</span>${isPlaced?'<span class="grade-tag">✓ placed</span>':''}</div>`;
-    if (!isPlaced) {
-      div.addEventListener('dragstart', e => onDragStart(e, c.id, 'sidebar'));
-      div.addEventListener('dragend', onDragEnd);
+
+  <!-- ════════════════════════════════════════════════════════════════
+       JAVASCRIPT
+  ════════════════════════════════════════════════════════════════ -->
+  <script>
+
+    // ─────────────────────────────────────────────────────────────────
+    // CONSTANTS
+    // ─────────────────────────────────────────────────────────────────
+
+    /** Human-readable label for each course category */
+    const CAT_LABELS = {
+      english:  'English',
+      math:     'Math',
+      science:  'Science',
+      ss:       'Social Studies',
+      lote:     'LOTE',
+      fine:     'Fine Arts',
+      pe:       'PE/Athletics',
+      elective: 'CTE/Elective',
+    };
+
+    const GRADES      = [9, 10, 11, 12];
+    const GRADE_NAMES = { 9: '9th Grade', 10: '10th Grade', 11: '11th Grade', 12: '12th Grade' };
+
+
+    // ─────────────────────────────────────────────────────────────────
+    // COURSE DATA
+    //
+    // Each course object:
+    //   id      – unique string key (used in saved plans)
+    //   name    – display name
+    //   cat     – category key (must match CAT_LABELS above)
+    //   grades  – array of grade levels where the course is available
+    //   credits – credit value (can be fractional, e.g. 0.5)
+    //   ibc     – (optional) number of Industry-Based Certifications
+    // ─────────────────────────────────────────────────────────────────
+
+    const COURSES = [
+
+      // ══════════════════════════════════════════════════════════════
+      // ENGLISH
+      // ══════════════════════════════════════════════════════════════
+      { id: 'e1',          name: 'English I',                                    cat: 'english', grades: [9],          credits: 1   },
+      { id: 'e1h',         name: 'English I Honors',                             cat: 'english', grades: [9],          credits: 1   },
+      { id: 'e1sg',        name: 'English I SAGE Honors',                        cat: 'english', grades: [9],          credits: 1   },
+      { id: 'e1esol',      name: 'English I/II – ESOL',                          cat: 'english', grades: [9,10,11,12], credits: 1   },
+      { id: 'e2',          name: 'English II',                                   cat: 'english', grades: [10],         credits: 1   },
+      { id: 'e2h',         name: 'English II Honors',                            cat: 'english', grades: [10],         credits: 1   },
+      { id: 'e2sg',        name: 'English II SAGE Honors',                       cat: 'english', grades: [10],         credits: 1   },
+      { id: 'e3',          name: 'English III',                                  cat: 'english', grades: [11],         credits: 1   },
+      { id: 'e3ap',        name: 'AP English III (Lang & Comp)',                 cat: 'english', grades: [11],         credits: 1   },
+      { id: 'e4',          name: 'English IV',                                   cat: 'english', grades: [12],         credits: 1   },
+      { id: 'e4ap',        name: 'AP English IV (Lit & Comp)',                   cat: 'english', grades: [12],         credits: 1   },
+      { id: 'eiblit',      name: 'IB English: Literature HL (Yr 1&2)',           cat: 'english', grades: [11,12],      credits: 2   },
+      { id: 'eibll',       name: 'IB English: Lang & Literature HL (Yr 1&2)',    cat: 'english', grades: [11,12],      credits: 2   },
+      { id: 'e1301',       name: 'ENGL 1301 Composition I (Dual Credit)',        cat: 'english', grades: [11,12],      credits: 0.5 },
+      { id: 'e1302',       name: 'ENGL 1302 Composition II (Dual Credit)',       cat: 'english', grades: [11,12],      credits: 0.5 },
+      { id: 'e2332',       name: 'ENGL 2332 World Lit I (Dual Credit)',          cat: 'english', grades: [12],         credits: 0.5 },
+      { id: 'e2333',       name: 'ENGL 2333 World Lit II (Dual Credit)',         cat: 'english', grades: [12],         credits: 0.5 },
+      { id: 'eap_sem',     name: 'AP Seminar',                                   cat: 'english', grades: [10,11,12],   credits: 1   },
+      { id: 'eap_res',     name: 'AP Research',                                  cat: 'english', grades: [11,12],      credits: 1   },
+      { id: 'ecreate',     name: 'Creative/Imaginative Writing',                 cat: 'english', grades: [10,11,12],   credits: 1   },
+      { id: 'eresearch',   name: 'Research and Technical Writing',               cat: 'english', grades: [11,12],      credits: 1   },
+      { id: 'epractwrite', name: 'Practical Writing Skills',                     cat: 'english', grades: [9,10,11],    credits: 1   },
+      { id: 'eread',       name: 'Reading I–III',                                cat: 'english', grades: [9,10,11,12], credits: 1   },
+      { id: 'ecollread',   name: 'College Readiness and Study Skills',           cat: 'english', grades: [9,10,11,12], credits: 0.5 },
+      { id: 'ecpela',      name: 'College Prep: English Language Arts',          cat: 'english', grades: [12],         credits: 1   },
+
+      // ── Journalism / Speech ──────────────────────────────────────
+      { id: 'j1',          name: 'Beginning Journalism',                         cat: 'elective', grades: [9,10,11,12],  credits: 0.5 },
+      { id: 'jphoto',      name: 'Photojournalism',                              cat: 'elective', grades: [9,10,11,12],  credits: 0.5 },
+      { id: 'debate1',     name: 'Debate I',                                     cat: 'elective', grades: [9,10,11,12],  credits: 1   },
+      { id: 'debate2',     name: 'Debate II',                                    cat: 'elective', grades: [10,11,12],    credits: 1   },
+      { id: 'debate3',     name: 'Debate III',                                   cat: 'elective', grades: [11,12],       credits: 1   },
+      { id: 'jprofcomm',   name: 'Professional Communications',                  cat: 'elective', grades: [9,10,11,12],  credits: 0.5 },
+      { id: 'jnews',       name: 'Adv Journalism: Newspaper Production I–III',   cat: 'elective', grades: [10,11,12],    credits: 1   },
+      { id: 'jyear',       name: 'Adv Journalism: Yearbook Production I–III',    cat: 'elective', grades: [10,11,12],    credits: 1   },
+
+      // ══════════════════════════════════════════════════════════════
+      // MATH
+      // ══════════════════════════════════════════════════════════════
+      { id: 'm_alg1',      name: 'Algebra I',                                       cat: 'math', grades: [9],         credits: 1   },
+      { id: 'm_alglab',    name: 'Algebra Lab (Strategic Learning)',                 cat: 'math', grades: [9,10,11,12],credits: 1   },
+      { id: 'm_geo',       name: 'Geometry',                                         cat: 'math', grades: [9,10],      credits: 1   },
+      { id: 'm_geoh',      name: 'Geometry Honors',                                  cat: 'math', grades: [9,10],      credits: 1   },
+      { id: 'm_algr',      name: 'Algebraic Reasoning',                              cat: 'math', grades: [11],        credits: 1   },
+      { id: 'm_alg2',      name: 'Algebra II',                                       cat: 'math', grades: [10,11,12],  credits: 1   },
+      { id: 'm_alg2h',     name: 'Algebra II Honors',                                cat: 'math', grades: [9,10,11],   credits: 1   },
+      { id: 'm_alg2or',    name: 'OnRamps Algebra II Honors (Dual Enrollment)',      cat: 'math', grades: [9,10,11],   credits: 1   },
+      { id: 'm_extalg',    name: 'Extended Algebra Concepts',                        cat: 'math', grades: [11,12],     credits: 1   },
+      { id: 'm_precalc',   name: 'Precalculus',                                      cat: 'math', grades: [11,12],     credits: 1   },
+      { id: 'm_precalch',  name: 'Precalculus Honors',                               cat: 'math', grades: [10,11,12],  credits: 1   },
+      { id: 'm_precalcor', name: 'OnRamps Precalculus Honors (Dual Enrollment)',     cat: 'math', grades: [10,11,12],  credits: 1   },
+      { id: 'm_calcab',    name: 'AP Calculus AB',                                   cat: 'math', grades: [11,12],     credits: 1   },
+      { id: 'm_calcbc',    name: 'AP Calculus BC',                                   cat: 'math', grades: [11,12],     credits: 1   },
+      { id: 'm_stats',     name: 'AP Statistics',                                    cat: 'math', grades: [11,12],     credits: 1   },
+      { id: 'm_statsor',   name: 'OnRamps Statistics Honors (Dual Enrollment)',      cat: 'math', grades: [11,12],     credits: 1   },
+      { id: 'm_ibapp',     name: 'IB Math: Applications & Interpretation HL (Yr 1&2)', cat: 'math', grades: [11,12],  credits: 2   },
+      { id: 'm_ibana',     name: 'IB Math: Analysis & Approaches HL (Yr 1&2)',       cat: 'math', grades: [11,12],     credits: 2   },
+      { id: 'm_calg',      name: 'MATH 1314 College Algebra (Dual Credit)',          cat: 'math', grades: [12],        credits: 0.5 },
+      { id: 'm_estats',    name: 'MATH 1342 Elementary Statistics (Dual Credit)',    cat: 'math', grades: [12],        credits: 0.5 },
+      { id: 'm_calc3',     name: 'MATH 2415 Calculus III (Dual Credit)',             cat: 'math', grades: [12],        credits: 0.5 },
+      { id: 'm_diffeq',    name: 'MATH 2320 Differential Equations (Dual Credit)',   cat: 'math', grades: [12],        credits: 0.5 },
+      { id: 'm_finmath',   name: 'Financial Mathematics (math credit)',               cat: 'math', grades: [11,12],     credits: 1   },
+      { id: 'm_statsbus',  name: 'Statistics & Business Decision-Making (math credit)', cat: 'math', grades: [11,12],  credits: 1   },
+      { id: 'm_acct2',     name: 'Accounting II (math credit)',                       cat: 'math', grades: [11,12],     credits: 1   },
+      { id: 'm_robo2',     name: 'Robotics II (math credit)',                         cat: 'math', grades: [10,11,12],  credits: 1   },
+      { id: 'm_mfg2',      name: 'Manufacturing Engineering Technology II (math credit)', cat: 'math', grades: [11,12], credits: 1, ibc: 1 },
+      { id: 'm_cpmat',     name: 'College Prep: Mathematics',                         cat: 'math', grades: [12],        credits: 1   },
+
+      // ══════════════════════════════════════════════════════════════
+      // SCIENCE
+      // ══════════════════════════════════════════════════════════════
+      { id: 'sci_bio',      name: 'Biology',                                          cat: 'science', grades: [9,10],     credits: 1 },
+      { id: 'sci_bioh',     name: 'Biology Honors',                                   cat: 'science', grades: [9,10],     credits: 1 },
+      { id: 'sci_biosg',    name: 'Biology Honors SAGE',                              cat: 'science', grades: [9],        credits: 1 },
+      { id: 'sci_ipc',      name: 'Integrated Physics & Chemistry (IPC)',             cat: 'science', grades: [10],       credits: 1 },
+      { id: 'sci_chemh',    name: 'Chemistry Honors',                                 cat: 'science', grades: [10],       credits: 1 },
+      { id: 'sci_chem',     name: 'Chemistry',                                        cat: 'science', grades: [10,11,12], credits: 1 },
+      { id: 'sci_phys',     name: 'Physics',                                          cat: 'science', grades: [10,11,12], credits: 1 },
+      { id: 'sci_aqua',     name: 'Aquatic Science',                                  cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_earth',    name: 'Earth Systems Science',                            cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_apbio',    name: 'AP Biology',                                       cat: 'science', grades: [10,11,12], credits: 1 },
+      { id: 'sci_apphys1',  name: 'AP Physics I',                                    cat: 'science', grades: [10,11,12], credits: 1 },
+      { id: 'sci_apphys2',  name: 'AP Physics II',                                   cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_apchem',   name: 'AP Chemistry',                                    cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_appmc',    name: 'AP Physics C: Mechanics',                         cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_appe',     name: 'AP Physics C: Electricity & Magnetism',           cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_apenv',    name: 'AP Environmental Science',                        cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_orgeo',    name: 'OnRamps Geoscience (Dual Enrollment)',             cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_ibbio',    name: 'IB Biology SL',                                   cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_ibphys',   name: 'IB Physics SL',                                   cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_ibenv',    name: 'IB Environmental Systems & Societies SL',         cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_anat',     name: 'Anatomy and Physiology (science credit)',          cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_foren',    name: 'Forensic Science (science credit)',                cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_food',     name: 'Food Science (science credit)',                    cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_applphys', name: 'Applied Physics (physics credit)',                 cat: 'science', grades: [10,11,12], credits: 1 },
+      { id: 'sci_uav1',     name: 'Unmanned Aerial Vehicles (UAV) I (science credit)', cat: 'science', grades: [10,11,12], credits: 1 },
+      { id: 'sci_advanim',  name: 'Advanced Animal Science (science credit)',         cat: 'science', grades: [11,12],    credits: 1 },
+      { id: 'sci_aerospace',name: 'Aerospace I – Scientific Research & Design',      cat: 'science', grades: [11,12],    credits: 1 },
+
+      // ══════════════════════════════════════════════════════════════
+      // SOCIAL STUDIES
+      // ══════════════════════════════════════════════════════════════
+      { id: 'ss_geo',      name: 'World Geography Studies',                          cat: 'ss', grades: [9,10,11,12],  credits: 1   },
+      { id: 'ss_geoh',     name: 'World Geography Studies Honors',                   cat: 'ss', grades: [9,10,11,12],  credits: 1   },
+      { id: 'ss_aphug',    name: 'AP Human Geography',                               cat: 'ss', grades: [9],           credits: 1   },
+      { id: 'ss_wh',       name: 'World History Studies',                            cat: 'ss', grades: [10,11,12],    credits: 1   },
+      { id: 'ss_apwh',     name: 'AP World History: Modern',                         cat: 'ss', grades: [10,11,12],    credits: 1   },
+      { id: 'ss_apeu',     name: 'AP European History',                              cat: 'ss', grades: [10,11,12],    credits: 1   },
+      { id: 'ss_us',       name: 'U.S. History Studies Since 1877',                  cat: 'ss', grades: [11],          credits: 1   },
+      { id: 'ss_apus',     name: 'AP United States History',                         cat: 'ss', grades: [11],          credits: 1   },
+      { id: 'ss_hist1',    name: 'HIST 1301 U.S. History I (Dual Credit)',           cat: 'ss', grades: [11],          credits: 0.5 },
+      { id: 'ss_hist2',    name: 'HIST 1302 U.S. History II (Dual Credit)',          cat: 'ss', grades: [11],          credits: 0.5 },
+      { id: 'ss_gov',      name: 'U.S. Government',                                  cat: 'ss', grades: [12],          credits: 0.5 },
+      { id: 'ss_apgov',    name: 'AP U.S. Government & Politics',                    cat: 'ss', grades: [12],          credits: 0.5 },
+      { id: 'ss_econ',     name: 'Economics w/ Emphasis on Free Enterprise',         cat: 'ss', grades: [12],          credits: 0.5 },
+      { id: 'ss_pfl',      name: 'Personal Financial Literacy',                      cat: 'ss', grades: [12],          credits: 0.5 },
+      { id: 'ss_pfle',     name: 'Personal Financial Literacy & Economics',          cat: 'ss', grades: [12],          credits: 0.5 },
+      { id: 'ss_apmacro',  name: 'AP Macroeconomics',                                cat: 'ss', grades: [12],          credits: 0.5 },
+      { id: 'ss_apmicro',  name: 'AP Microeconomics',                                cat: 'ss', grades: [12],          credits: 0.5 },
+      { id: 'ss_ibhist',   name: 'IB History HL (Yr 1&2)',                           cat: 'ss', grades: [11,12],       credits: 2   },
+      { id: 'ss_psych',    name: 'Psychology',                                        cat: 'ss', grades: [10,11,12],    credits: 0.5 },
+      { id: 'ss_sttop',    name: 'Special Topics in Social Studies: Psychology',     cat: 'ss', grades: [10,11,12],    credits: 0.5 },
+      { id: 'ss_appsych',  name: 'AP Psychology',                                    cat: 'ss', grades: [10,11,12],    credits: 0.5 },
+      { id: 'ss_socio',    name: 'Sociology',                                         cat: 'ss', grades: [10,11,12],    credits: 0.5 },
+      { id: 'ss_ibphil',   name: 'IB Philosophy SL',                                 cat: 'ss', grades: [11,12],       credits: 1   },
+      { id: 'ss_govt_dc',  name: 'GOVT 2305 Federal Government (Dual Credit)',       cat: 'ss', grades: [12],          credits: 0.5 },
+      { id: 'ss_econ_dc',  name: 'ECON 2301 Macroeconomics (Dual Credit)',           cat: 'ss', grades: [12],          credits: 0.5 },
+
+      // ══════════════════════════════════════════════════════════════
+      // LANGUAGES OTHER THAN ENGLISH (LOTE)
+      // ══════════════════════════════════════════════════════════════
+
+      // Spanish
+      { id: 'lot_sp1',    name: 'Spanish I',                              cat: 'lote', grades: [9,10,11,12],  credits: 1 },
+      { id: 'lot_sp1ns',  name: 'Spanish I for Native Speakers',          cat: 'lote', grades: [9,10,11],     credits: 1 },
+      { id: 'lot_sp2',    name: 'Spanish II',                             cat: 'lote', grades: [9,10,11,12],  credits: 1 },
+      { id: 'lot_sp2h',   name: 'Spanish II Honors',                      cat: 'lote', grades: [9,10,11,12],  credits: 1 },
+      { id: 'lot_sp2ns',  name: 'Spanish II Honors for Native Speakers',  cat: 'lote', grades: [9,10,11,12],  credits: 1 },
+      { id: 'lot_sp3',    name: 'Spanish III Honors',                     cat: 'lote', grades: [10,11,12],    credits: 1 },
+      { id: 'lot_sp4',    name: 'AP Spanish IV (Lang & Culture)',          cat: 'lote', grades: [11,12],       credits: 1 },
+      { id: 'lot_sp5',    name: 'AP Spanish V (Literature)',               cat: 'lote', grades: [11,12],       credits: 1 },
+      { id: 'lot_ibspai', name: 'IB Spanish ab initio (Yr 1&2)',          cat: 'lote', grades: [11,12],       credits: 2 },
+      { id: 'lot_ibsp1',  name: 'IB Spanish B SL Year 1',                 cat: 'lote', grades: [11,12],       credits: 1 },
+      { id: 'lot_ibsp2',  name: 'IB Spanish B SL Year 2',                 cat: 'lote', grades: [12],          credits: 1 },
+
+      // French
+      { id: 'lot_fr1',    name: 'French I',                               cat: 'lote', grades: [9,10,11,12],  credits: 1 },
+      { id: 'lot_fr2',    name: 'French II',                              cat: 'lote', grades: [10,11,12],    credits: 1 },
+      { id: 'lot_fr2h',   name: 'French II Honors',                       cat: 'lote', grades: [10,11,12],    credits: 1 },
+      { id: 'lot_fr3',    name: 'French III Honors',                      cat: 'lote', grades: [11,12],       credits: 1 },
+      { id: 'lot_fr4',    name: 'AP French IV (Lang & Culture)',           cat: 'lote', grades: [11,12],       credits: 1 },
+      { id: 'lot_ibfrai', name: 'IB French ab initio (Yr 1&2)',           cat: 'lote', grades: [11,12],       credits: 2 },
+      { id: 'lot_ibfr1',  name: 'IB French B SL Year 1',                  cat: 'lote', grades: [11,12],       credits: 1 },
+      { id: 'lot_ibfr2',  name: 'IB French B SL Year 2',                  cat: 'lote', grades: [12],          credits: 1 },
+
+      // American Sign Language
+      { id: 'lot_asl1',   name: 'American Sign Language (ASL) I',         cat: 'lote', grades: [9,10,11,12],  credits: 1 },
+      { id: 'lot_asl2',   name: 'American Sign Language (ASL) II',        cat: 'lote', grades: [10,11,12],    credits: 1 },
+      { id: 'lot_asl3',   name: 'American Sign Language (ASL) III',       cat: 'lote', grades: [11,12],       credits: 1 },
+      { id: 'lot_asl4',   name: 'American Sign Language (ASL) IV',        cat: 'lote', grades: [11,12],       credits: 1 },
+
+      // CTE courses that also satisfy LOTE credit
+      { id: 'lot_cs1h',   name: 'Computer Science I Honors (LOTE credit)',          cat: 'lote', grades: [9,10,11,12], credits: 1 },
+      { id: 'lot_csp',    name: 'AP Computer Science Principles (LOTE credit)',     cat: 'lote', grades: [9,10,11,12], credits: 1 },
+      { id: 'lot_csa',    name: 'AP Computer Science A (LOTE + math credit)',       cat: 'lote', grades: [10,11,12],   credits: 2 },
+      { id: 'lot_cs3',    name: 'Computer Science III (LOTE credit)',               cat: 'lote', grades: [11,12],      credits: 1, ibc: 1 },
+
+      // ── IB Core (not a standalone subject but needs a slot) ──────
+      { id: 'ib_tok',  name: 'IB Theory of Knowledge', cat: 'elective', grades: [11,12], credits: 1   },
+      { id: 'ib_res1', name: 'IB Research Year 1',     cat: 'elective', grades: [11],    credits: 0.5 },
+      { id: 'ib_res2', name: 'IB Research Year 2',     cat: 'elective', grades: [12],    credits: 0.5 },
+
+      // ══════════════════════════════════════════════════════════════
+      // FINE ARTS – Music
+      // ══════════════════════════════════════════════════════════════
+      { id: 'fa_band_nv',   name: 'Band – Non-Varsity I–IV',                   cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_band_v',    name: 'Band – Varsity I–IV',                       cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_band_perc', name: 'Percussion Ensemble I–IV',                  cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_jazz',      name: 'Jazz Band I–IV',                            cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_ipe',       name: 'Instrumental Performance Ensemble I–IV',    cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_choir_nv',  name: 'Choir – Non-Varsity I–IV',                 cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_choir_v',   name: 'Choir – Varsity Mixed I–IV',               cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_choir_ac',  name: 'A Capella Choir I–IV',                     cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_orch_nv',   name: 'Orchestra – Non-Varsity I–IV',             cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_orch_v',    name: 'Orchestra – Varsity I–IV',                 cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_chamber',   name: 'Chamber Ensemble I–IV',                    cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_piano1',    name: 'Piano Performance I',                       cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_piano2',    name: 'Piano Performance II–IV',                   cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_ibmus',     name: 'IB Music SL (Yr 1&2)',                     cat: 'fine', grades: [11,12],      credits: 2 },
+      { id: 'fa_apmus',     name: 'AP Music Theory',                           cat: 'fine', grades: [10,11,12],   credits: 1 },
+
+      // ── Fine Arts – Visual Arts ──────────────────────────────────
+      { id: 'fa_art1',      name: 'Art I',                                     cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_art2draw',  name: 'Art II–IV Drawing',                        cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_art2paint', name: 'Art II–IV Painting',                       cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_art2ceram', name: 'Art II–IV Ceramics',                       cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_art2sculpt',name: 'Art II–IV Sculpture (3-D)',                cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_art2print', name: 'Art II–IV Printmaking',                    cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_art3digi',  name: 'Art III–IV Digital Illustration',          cat: 'fine', grades: [11,12],      credits: 1 },
+      { id: 'fa_portart1',  name: 'Portfolio Art I Honors',                   cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_portart2',  name: 'Portfolio Art II Honors (2-D or 3-D)',     cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_portart3',  name: 'Portfolio Art III Honors (2-D or 3-D)',    cat: 'fine', grades: [11,12],      credits: 1 },
+      { id: 'fa_apdraw',    name: 'AP Studio Art Drawing',                    cat: 'fine', grades: [11,12],      credits: 1 },
+      { id: 'fa_ap2d',      name: 'AP Studio Art 2-D Design',                 cat: 'fine', grades: [11,12],      credits: 1 },
+      { id: 'fa_ap3d',      name: 'AP Studio Art 3-D Design',                 cat: 'fine', grades: [11,12],      credits: 1 },
+      { id: 'fa_arthistap', name: 'AP Art History',                            cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_ibva',      name: 'IB Visual Arts SL/HL',                     cat: 'fine', grades: [11,12],      credits: 1 },
+      { id: 'fa_ibfilm',    name: 'IB Film SL',                               cat: 'fine', grades: [11,12],      credits: 1 },
+
+      // ── Fine Arts – Theatre ──────────────────────────────────────
+      { id: 'fa_theat1',     name: 'Studio Theatre I',                        cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_theat2',     name: 'Studio Theatre II–IV',                    cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_mustheat1',  name: 'Musical Theatre I',                       cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_mustheat2',  name: 'Musical Theatre II–IV',                   cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_theat9',     name: '9th Grade Theatre Production I',          cat: 'fine', grades: [9],          credits: 1 },
+      { id: 'fa_theatjv',    name: 'JV Theatre Production II–IV',             cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_theatv',     name: 'Varsity Theatre Production I–IV',         cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_techtheat1', name: 'Technical Theatre I',                     cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_techtheat2', name: 'Technical Theatre II–IV',                 cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_pac',        name: 'Performing Arts Center Management',       cat: 'fine', grades: [10,11,12],   credits: 1 },
+
+      // ── Fine Arts – Dance ────────────────────────────────────────
+      { id: 'fa_dance1',    name: 'Principles of Dance I',                    cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_dance2',    name: 'Principles of Dance II–IV',                cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_danceperf', name: 'Dance Performance Ensemble / Drill Team I–IV', cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_danceimp',  name: 'Dance I–III Composition & Improvisation',  cat: 'fine', grades: [10,11,12],   credits: 1 },
+      { id: 'fa_danceflag', name: 'Dance Flag Performance I–IV',              cat: 'fine', grades: [9,10,11,12], credits: 1 },
+
+      // CTE courses that also satisfy a Fine Arts credit
+      { id: 'fa_floralart', name: 'Floral Design (Fine Arts credit)',          cat: 'fine', grades: [10,11,12], credits: 1 },
+      { id: 'fa_digianim',  name: 'Digital Art & Animation (Fine Arts credit)',cat: 'fine', grades: [10,11,12], credits: 1 },
+
+      // ══════════════════════════════════════════════════════════════
+      // PE / ATHLETICS
+      // ══════════════════════════════════════════════════════════════
+      { id: 'pe_pe',    name: 'Physical Education',             cat: 'pe', grades: [9,10,11,12], credits: 1   },
+      { id: 'pe_athl',  name: 'Athletics I–IV',                 cat: 'pe', grades: [9,10,11,12], credits: 1   },
+      { id: 'pe_health',name: 'Health',                         cat: 'pe', grades: [9,10,11,12], credits: 0.5 },
+      { id: 'pe_jrotc', name: 'JROTC Year I (also PE credit)',  cat: 'pe', grades: [9,10,11,12], credits: 1   },
+
+      // ══════════════════════════════════════════════════════════════
+      // CTE / ELECTIVES
+      // ══════════════════════════════════════════════════════════════
+
+      // ── Agriculture ──────────────────────────────────────────────
+      { id: 'cte_agri1',    name: 'Principles of Agriculture, Food & Natural Resources', cat: 'elective', grades: [9],      credits: 1          },
+      { id: 'cte_agrmech',  name: 'Agricultural Mechanics & Metal Technologies',          cat: 'elective', grades: [10,11],  credits: 1, ibc: 1  },
+      { id: 'cte_agrpower', name: 'Agricultural Power Systems',                           cat: 'elective', grades: [11],     credits: 2, ibc: 1  },
+      { id: 'cte_agrfab',   name: 'Agricultural Equipment Design & Fabrication',          cat: 'elective', grades: [11,12],  credits: 1, ibc: 1  },
+      { id: 'cte_agprac',   name: 'Practicum in Agriculture (Technology)',                cat: 'elective', grades: [12],     credits: 2, ibc: 1  },
+      { id: 'cte_floral1',  name: 'Floral Design',                                        cat: 'elective', grades: [10,11,12], credits: 1, ibc: 1},
+      { id: 'cte_floral2',  name: 'Advanced Floral Design',                               cat: 'elective', grades: [11,12],  credits: 1, ibc: 1  },
+      { id: 'cte_floralprac',name:'Practicum in Floral Design',                           cat: 'elective', grades: [12],     credits: 2, ibc: 1  },
+      { id: 'cte_equine',   name: 'Equine Science',                                       cat: 'elective', grades: [10,11],  credits: 0.5, ibc: 1},
+      { id: 'cte_smallanim',name: 'Small Animal Management',                              cat: 'elective', grades: [10,11],  credits: 0.5        },
+      { id: 'cte_livestock',name: 'Livestock & Poultry Production',                       cat: 'elective', grades: [10,11,12], credits: 1, ibc: 1},
+      { id: 'cte_vetsci',   name: 'Veterinary Science',                                   cat: 'elective', grades: [11],     credits: 1, ibc: 1  },
+      { id: 'cte_vetprac',  name: 'Practicum in Veterinary Medicine',                     cat: 'elective', grades: [12],     credits: 2, ibc: 1  },
+
+      // ── Architecture ─────────────────────────────────────────────
+      { id: 'cte_arch1',    name: 'Principles of Architecture',        cat: 'elective', grades: [9],      credits: 1          },
+      { id: 'cte_arch2',    name: 'Architectural Design I',            cat: 'elective', grades: [10,11],  credits: 1          },
+      { id: 'cte_arch3',    name: 'Architectural Design II',           cat: 'elective', grades: [11,12],  credits: 2, ibc: 1  },
+      { id: 'cte_archprac', name: 'Practicum in Architectural Design', cat: 'elective', grades: [12],     credits: 2          },
+
+      // ── Arts, Audio/Video Tech & Communications (AAVTC) ─────────
+      { id: 'cte_aavtc1',  name: 'Principles of Arts, A/V Tech & Communications', cat: 'elective', grades: [9],      credits: 1         },
+      { id: 'cte_anim1',   name: 'Animation I',                                    cat: 'elective', grades: [10,11],  credits: 1         },
+      { id: 'cte_anim2',   name: 'Animation II with Lab',                          cat: 'elective', grades: [11,12],  credits: 2, ibc: 1 },
+      { id: 'cte_animp',   name: 'Practicum in Animation',                         cat: 'elective', grades: [12],     credits: 2         },
+      { id: 'cte_avp1',    name: 'Audio/Video Production I',                       cat: 'elective', grades: [10,11,12], credits: 1       },
+      { id: 'cte_avp2',    name: 'Audio/Video Production II with Lab',             cat: 'elective', grades: [11,12],  credits: 2, ibc: 1 },
+      { id: 'cte_avpp',    name: 'Practicum in Audio/Video Production',            cat: 'elective', grades: [12],     credits: 2, ibc: 1 },
+      { id: 'cte_fashion1',name: 'Fashion Design I',                               cat: 'elective', grades: [9],      credits: 1         },
+      { id: 'cte_fashion2',name: 'Fashion Design II with Lab',                     cat: 'elective', grades: [10,11],  credits: 2         },
+      { id: 'cte_fashionp',name: 'Practicum in Fashion Design I',                  cat: 'elective', grades: [11,12],  credits: 2         },
+      { id: 'cte_gdi1',    name: 'Graphic Design & Illustration I',                cat: 'elective', grades: [10,11,12], credits: 1, ibc: 1},
+      { id: 'cte_gdi2',    name: 'Graphic Design & Illustration II with Lab',      cat: 'elective', grades: [11,12],  credits: 2, ibc: 1 },
+      { id: 'cte_gdip',    name: 'Practicum in Graphic Design & Illustration',     cat: 'elective', grades: [12],     credits: 2, ibc: 1 },
+      { id: 'cte_photo1',  name: 'Commercial Photography I',                       cat: 'elective', grades: [10,11,12], credits: 1       },
+      { id: 'cte_photo2',  name: 'Commercial Photography II with Lab',             cat: 'elective', grades: [11,12],  credits: 2, ibc: 1 },
+      { id: 'cte_photop',  name: 'Practicum in Commercial Photography',            cat: 'elective', grades: [12],     credits: 2         },
+      { id: 'cte_vgd1',    name: 'Video Game Design',                              cat: 'elective', grades: [10,11],  credits: 1         },
+      { id: 'cte_vgd2',    name: 'Video Game Programming',                         cat: 'elective', grades: [11,12],  credits: 1         },
+      { id: 'cte_vgd3',    name: 'Advanced Video Game Programming',                cat: 'elective', grades: [12],     credits: 1, ibc: 1 },
+
+      // ── Business, Marketing & Finance ────────────────────────────
+      { id: 'cte_bus1',       name: 'Principles of Business, Marketing & Finance',          cat: 'elective', grades: [9,10],    credits: 1         },
+      { id: 'cte_money',      name: 'Money Matters',                                         cat: 'elective', grades: [10,11,12],credits: 1         },
+      { id: 'cte_acct1',      name: 'Accounting I',                                          cat: 'elective', grades: [10,11,12],credits: 1, ibc: 1 },
+      { id: 'cte_entrep',     name: 'Entrepreneurship',                                      cat: 'elective', grades: [11,12],   credits: 1, ibc: 1 },
+      { id: 'cte_bustech1',   name: 'Foundations of Business Communication & Technologies', cat: 'elective', grades: [10,11,12],credits: 1         },
+      { id: 'cte_bustech2',   name: 'Business Communication & Technologies II',             cat: 'elective', grades: [11,12],   credits: 1, ibc: 1 },
+      { id: 'cte_busmgmt',    name: 'Business Management',                                   cat: 'elective', grades: [10,11],   credits: 1, ibc: 1 },
+      { id: 'cte_vbiz',       name: 'Virtual Business',                                      cat: 'elective', grades: [11,12],   credits: 0.5       },
+      { id: 'cte_hr',         name: 'Human Resource Management',                             cat: 'elective', grades: [11,12],   credits: 0.5       },
+      { id: 'cte_sports_mkt', name: 'Sports & Entertainment Marketing',                      cat: 'elective', grades: [10,11],   credits: 0.5       },
+      { id: 'cte_social_mkt', name: 'Social Media Marketing',                                cat: 'elective', grades: [10,11],   credits: 0.5       },
+      { id: 'cte_realty',     name: 'Fundamentals of Real Estate',                           cat: 'elective', grades: [11],      credits: 2         },
+      { id: 'cte_practbus',   name: 'Practicum in Business Management',                      cat: 'elective', grades: [12],      credits: 2         },
+      { id: 'cte_careerprep', name: 'Career Preparation for Program of Study',               cat: 'elective', grades: [12],      credits: 2         },
+
+      // ── Engineering ──────────────────────────────────────────────
+      { id: 'cte_eng1',     name: 'Engineering Design Process',                              cat: 'elective', grades: [9,10],   credits: 1         },
+      { id: 'cte_robo1',    name: 'Robotics I',                                              cat: 'elective', grades: [9,10,11],credits: 1         },
+      { id: 'cte_engdes',   name: 'Engineering Design & Presentation',                       cat: 'elective', grades: [10,11],  credits: 1         },
+      { id: 'cte_engdes2',  name: 'Advanced Engineering Design & Presentation (UT DE)',      cat: 'elective', grades: [11,12],  credits: 2, ibc: 1 },
+      { id: 'cte_progeng',  name: 'Programming for Engineers',                               cat: 'elective', grades: [11,12],  credits: 1         },
+      { id: 'cte_engprac',  name: 'Practicum in Engineering',                                cat: 'elective', grades: [12],     credits: 2, ibc: 1 },
+      { id: 'cte_uav2',     name: 'UAV II / Drone Program',                                  cat: 'elective', grades: [11,12],  credits: 1, ibc: 1 },
+
+      // ── Information Technology / Cybersecurity ───────────────────
+      { id: 'cte_cyber1',   name: 'AP CK Cybersecurity',          cat: 'elective', grades: [9,10,11,12], credits: 1, ibc: 1 },
+      { id: 'cte_cyber2',   name: 'AP CK Cyber: Networking',      cat: 'elective', grades: [10,11,12],   credits: 1, ibc: 1 },
+      { id: 'cte_cybercap', name: 'Cybersecurity Capstone',        cat: 'elective', grades: [11,12],      credits: 1         },
+
+      // ── Manufacturing ────────────────────────────────────────────
+      { id: 'cte_mfg1',     name: 'Principles of Manufacturing',                    cat: 'elective', grades: [9,10,11],  credits: 1         },
+      { id: 'cte_mfgtech1', name: 'Manufacturing Engineering Technology I',         cat: 'elective', grades: [10,11,12], credits: 1, ibc: 1 },
+      { id: 'cte_mfgprac',  name: 'Practicum in Manufacturing',                     cat: 'elective', grades: [11,12],    credits: 2, ibc: 1 },
+
+      // ── Hospitality / Culinary Arts ──────────────────────────────
+      { id: 'cte_cul0',   name: 'Introduction to Culinary Arts',  cat: 'elective', grades: [9,10],   credits: 1         },
+      { id: 'cte_cul1',   name: 'Culinary Arts',                  cat: 'elective', grades: [10,11],  credits: 2, ibc: 1 },
+      { id: 'cte_cul2',   name: 'Advanced Culinary Arts',         cat: 'elective', grades: [11,12],  credits: 2         },
+      { id: 'cte_culprac',name: 'Practicum in Culinary Arts',     cat: 'elective', grades: [12],     credits: 2         },
+
+      // ── Education & Training ─────────────────────────────────────
+      { id: 'cte_edu1',    name: 'Principles of Education & Training', cat: 'elective', grades: [9],      credits: 1         },
+      { id: 'cte_edu2',    name: 'Technology for Teaching',            cat: 'elective', grades: [10,11,12],credits: 1         },
+      { id: 'cte_edu3',    name: 'Instructional Practices',            cat: 'elective', grades: [11,12],   credits: 2         },
+      { id: 'cte_eduprac', name: 'Practicum in Education & Training',  cat: 'elective', grades: [12],      credits: 2, ibc: 1 },
+
+      // ── Health Science ───────────────────────────────────────────
+      { id: 'cte_medterm',   name: 'Medical Terminology',                                cat: 'elective', grades: [9],   credits: 1         },
+      { id: 'cte_hsci',      name: 'Health Science Theory',                              cat: 'elective', grades: [10,11],credits: 1         },
+      { id: 'cte_pct1',      name: 'Patient Care Technician I (Dual Credit)',            cat: 'elective', grades: [11],  credits: 3         },
+      { id: 'cte_pct2',      name: 'Patient Care Technician II (Dual Credit)',           cat: 'elective', grades: [12],  credits: 3         },
+      { id: 'cte_dental1',   name: 'Dental I – Practicum in Health Science I',          cat: 'elective', grades: [11],  credits: 2         },
+      { id: 'cte_dental2',   name: 'Dental II – Practicum in Health Science II',        cat: 'elective', grades: [12],  credits: 2, ibc: 1 },
+      { id: 'cte_emtprep',   name: 'EMT Prep: Medical Disaster Response',               cat: 'elective', grades: [11],  credits: 1         },
+      { id: 'cte_emt',       name: 'EMT – Practicum in Health Science I',               cat: 'elective', grades: [12],  credits: 2, ibc: 1 },
+      { id: 'cte_pharm',     name: 'Pharmacology',                                       cat: 'elective', grades: [11],  credits: 1         },
+      { id: 'cte_pharmprac', name: 'Pharmacy Technician – Practicum in Health Science', cat: 'elective', grades: [12],  credits: 2, ibc: 1 },
+      { id: 'cte_medclin',   name: 'Medical Clinical – Practicum in Health Science I',  cat: 'elective', grades: [11],  credits: 2, ibc: 1 },
+      { id: 'cte_medintern', name: 'Internship – Practicum in Health Science II',       cat: 'elective', grades: [12],  credits: 2, ibc: 1 },
+
+      // ── Law, Public Safety, Corrections & Security ───────────────
+      { id: 'cte_law1',     name: 'Principles of Law, Public Safety, Corrections & Security', cat: 'elective', grades: [9],      credits: 1         },
+      { id: 'cte_lawenf1',  name: 'Law Enforcement I',                                         cat: 'elective', grades: [10,11],  credits: 1         },
+      { id: 'cte_lawenf2',  name: 'Law Enforcement II',                                        cat: 'elective', grades: [11,12],  credits: 1, ibc: 1 },
+      { id: 'cte_legalres', name: 'Legal Research',                                             cat: 'elective', grades: [10,11],  credits: 1, ibc: 1 },
+      { id: 'cte_court',    name: 'Court Systems & Practices',                                  cat: 'elective', grades: [12],     credits: 1         },
+      { id: 'cte_crimeinv', name: 'Criminal Investigation',                                     cat: 'elective', grades: [12],     credits: 1         },
+      { id: 'cte_lawprac',  name: 'Practicum in Law, Public Safety & Security',                cat: 'elective', grades: [12],     credits: 2         },
+
+      // ── JROTC (Years II–IV; Year I is under PE) ──────────────────
+      { id: 'cte_jrotc2', name: 'JROTC Year II',  cat: 'elective', grades: [10,11,12], credits: 1 },
+      { id: 'cte_jrotc3', name: 'JROTC Year III', cat: 'elective', grades: [11,12],    credits: 1 },
+      { id: 'cte_jrotc4', name: 'JROTC Year IV',  cat: 'elective', grades: [12],       credits: 1 },
+
+      // ── Trade / Dual-Credit programs (offered off-campus) ────────
+      { id: 'cte_weld1',     name: 'Welding I & II (Dual Credit)',            cat: 'elective', grades: [11], credits: 4 },
+      { id: 'cte_weld2',     name: 'Welding III & IV (Dual Credit)',          cat: 'elective', grades: [12], credits: 4 },
+      { id: 'cte_auto1',     name: 'Automotive Technology I & II (Dual Credit)', cat: 'elective', grades: [12], credits: 4 },
+      { id: 'cte_collision', name: 'Auto Collision Technology (Dual Credit)', cat: 'elective', grades: [12], credits: 4 },
+      { id: 'cte_hvac1',     name: 'HVAC I (Dual Credit)',                    cat: 'elective', grades: [11], credits: 4 },
+      { id: 'cte_hvac2',     name: 'HVAC II (Dual Credit)',                   cat: 'elective', grades: [12], credits: 4 },
+
+      // ── Career Preparation / General ─────────────────────────────
+      { id: 'cte_cp1',     name: 'Career Preparation I',        cat: 'elective', grades: [11,12],    credits: 2 },
+      { id: 'cte_cp2',     name: 'Career Preparation II',       cat: 'elective', grades: [12],       credits: 2 },
+      { id: 'cte_gen_emp', name: 'General Employability Skills', cat: 'elective', grades: [9,10,11,12], credits: 1 },
+
+    ]; // end COURSES
+
+
+    // ─────────────────────────────────────────────────────────────────
+    // STATE
+    // ─────────────────────────────────────────────────────────────────
+
+    /** The student's current plan: maps grade number → array of course IDs */
+    let plan = { 9: [], 10: [], 11: [], 12: [] };
+
+    /** Which category filter tab is active */
+    let activeFilter = 'all';
+
+    /** Tracks what is curr
+    /** Tracks what is currently being dragged: { id, from } */
+    let dragSource = null;
+
+
+    // ─────────────────────────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────────────────────────
+
+    function init() {
+      // Restore any previously saved plan from localStorage
+      try {
+        const saved = localStorage.getItem('rh_plan_27');
+        if (saved) plan = JSON.parse(saved);
+      } catch (e) { /* ignore corrupt data */ }
+
+      renderSidebar();
+      renderPlanner();
+      updateCredits();
     }
-    list.appendChild(div);
-  });
-}
 
-function renderPlanner() {
-  const grid = document.getElementById('gradeGrid');
-  grid.innerHTML = '';
-  GRADES.forEach(g => {
-    const col = document.createElement('div');
-    col.className = 'grade-col';
-    col.innerHTML = `<div class="grade-col-header"><h3>${GRADE_NAMES[g]}</h3><span class="grade-badge">Grade ${g}</span><span class="credits-count" id="credits-${g}">0 cr</span></div>`;
-    const zone = document.createElement('div');
-    zone.className = 'drop-zone';
-    zone.dataset.grade = g;
-    zone.addEventListener('dragover', e => onDragOver(e, g));
-    zone.addEventListener('dragleave', e => { if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.classList.remove('drag-over'); });
-    zone.addEventListener('drop', e => onDrop(e, g));
-    if (plan[g].length === 0) {
-      zone.innerHTML = '<div class="drop-hint">Drop courses here</div>';
-    } else {
-      plan[g].forEach(cid => {
-        const course = COURSES.find(c => c.id === cid);
-        if (course) zone.appendChild(makePlacedCard(course, g));
+
+    // ─────────────────────────────────────────────────────────────────
+    // PERSISTENCE
+    // ─────────────────────────────────────────────────────────────────
+
+    function savePlan() {
+      try {
+        localStorage.setItem('rh_plan_27', JSON.stringify(plan));
+        showToast('Plan saved!');
+      } catch (e) {
+        showToast('Could not save.');
+      }
+    }
+
+    function clearAll() {
+      if (!confirm('Clear your entire plan?')) return;
+      plan = { 9: [], 10: [], 11: [], 12: [] };
+      renderSidebar();
+      renderPlanner();
+      updateCredits();
+      savePlan();
+    }
+
+    /** Brief toast notification in the bottom-right corner */
+    function showToast(msg) {
+      const toast = document.createElement('div');
+      toast.textContent = msg;
+      Object.assign(toast.style, {
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        background: '#1a1714',
+        color: '#fff',
+        padding: '10px 18px',
+        borderRadius: '8px',
+        fontFamily: "'DM Sans', sans-serif",
+        fontSize: '.82rem',
+        boxShadow: '0 4px 16px rgba(0,0,0,.2)',
+        zIndex: 9999,
+        transition: 'opacity .3s',
       });
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 1800);
     }
-    col.appendChild(zone);
-    grid.appendChild(col);
-  });
-  updateCredits();
-}
 
-function makePlacedCard(course, grade) {
-  const div = document.createElement('div');
-  div.className = `placed-card cat-${course.cat}`;
-  div.draggable = true;
-  div.dataset.id = course.id;
-  div.innerHTML = `<div class="dot"></div><span class="placed-name">${course.name}</span><button class="remove-btn" title="Remove" onclick="removeCourse('${course.id}',${grade})">✕</button>`;
-  div.addEventListener('dragstart', e => onDragStart(e, course.id, grade));
-  div.addEventListener('dragend', onDragEnd);
-  return div;
-}
 
-function removeCourse(cid, grade) {
-  plan[grade] = plan[grade].filter(id => id !== cid);
-  renderPlanner();
-  renderSidebar(document.getElementById('search').value.toLowerCase().trim());
-}
+    // ─────────────────────────────────────────────────────────────────
+    // SIDEBAR RENDERING
+    // ─────────────────────────────────────────────────────────────────
 
-function updateCredits() {
-  let total = 0;
-  let ibcTotal = 0;
-  const cats = {};
+    /** Switch the active category filter */
+    function setCat(cat, buttonEl) {
+      activeFilter = cat;
+      document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+      buttonEl.classList.add('active');
+      filterCourses();
+    }
 
-  GRADES.forEach(g => {
-    const credits = plan[g].reduce((sum, cid) => {
-      const c = COURSES.find(x => x.id === cid);
-      if (!c) return sum;
+    /** Called on every keystroke in the search box */
+    function filterCourses() {
+      const query = document.getElementById('search').value.toLowerCase().trim();
+      renderSidebar(query);
+    }
 
-      total += 0; // (kept implicit structure clean)
-      cats[c.cat] = (cats[c.cat] || 0) + c.credits;
+    /** Returns a Set of every course ID that is already in the plan */
+    function getPlacedIds() {
+      return new Set([...plan[9], ...plan[10], ...plan[11], ...plan[12]]);
+    }
 
-      if (c.ibc) ibcTotal += c.ibc;
+    /** Rebuild the sidebar course list, applying category + search filters */
+    function renderSidebar(query = '') {
+      const listEl  = document.getElementById('courseList');
+      const placed  = getPlacedIds();
 
-      return sum + c.credits;
-    }, 0);
+      // Filter courses by active category and search query
+      const filtered = COURSES.filter(course => {
+        const matchesCat   = activeFilter === 'all' || course.cat === activeFilter;
+        const matchesQuery = !query || course.name.toLowerCase().includes(query);
+        return matchesCat && matchesQuery;
+      });
 
-    total += credits;
+      // Already-placed courses sink to the bottom
+      filtered.sort((a, b) => {
+        const aPlaced = placed.has(a.id);
+        const bPlaced = placed.has(b.id);
+        if (aPlaced !== bPlaced) return aPlaced ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      });
 
-    const el = document.getElementById(`credits-${g}`);
-    if (el) el.textContent = `${credits} cr`;
-  });
+      listEl.innerHTML = '';
 
-  const summary = document.getElementById('creditSummary');
+      if (filtered.length === 0) {
+        listEl.innerHTML = '<div class="empty-state">No courses found.</div>';
+        return;
+      }
 
-  const catHTML = Object.entries(cats)
-    .map(([k, v]) =>
-      `<div class="credit-pill cat-${k}">
-        <span class="tag">${CAT_LABELS[k]}</span>
-        <b>${v}</b>
-      </div>`
-    ).join('');
+      for (const course of filtered) {
+        const isPlaced = placed.has(course.id);
+        const card     = document.createElement('div');
 
-  summary.innerHTML =
-    `<div class="credit-pill">Total <b>${total}</b> cr</div>` +
-    `<div class="credit-pill">IBC <b>${ibcTotal}</b></div>` +
-    catHTML;
-}
-function onDragEnd() {
-  document.querySelectorAll('.dragging').forEach(el=>el.classList.remove('dragging'));
-  document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'));
-  dragSource = null;
-}
+        card.className   = `course-card cat-${course.cat}${isPlaced ? ' placed' : ''}`;
+        card.draggable   = !isPlaced;
+        card.dataset.id  = course.id;
+        card.innerHTML   = `
+          <div class="course-name">${course.name}</div>
+          <div class="course-meta">
+            <span class="tag">${CAT_LABELS[course.cat]}</span>
+            <span class="grade-tag">Gr ${course.grades.join(', ')} · ${course.credits} cr</span>
+            ${isPlaced ? '<span class="grade-tag">✓ placed</span>' : ''}
+          </div>`;
 
-function onDragOver(e, grade) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  e.currentTarget.classList.add('drag-over');
-}
+        if (!isPlaced) {
+          card.addEventListener('dragstart', e => onDragStart(e, course.id, 'sidebar'));
+          card.addEventListener('dragend',   onDragEnd);
+        }
 
-function onDrop(e, grade) {
-  e.preventDefault();
-  e.currentTarget.classList.remove('drag-over');
-  if (!dragSource) return;
-  const {id, from} = dragSource;
-  if (typeof from === 'number') plan[from] = plan[from].filter(cid=>cid!==id);
-  if (!plan[grade].includes(id)) plan[grade] = [...plan[grade], id];
-  dragSource = null;
-  renderPlanner();
-  renderSidebar(document.getElementById('search').value.toLowerCase().trim());
-  savePlan();
-}
+        listEl.appendChild(card);
+      }
+    }
 
-init();
-</script>
+
+    // ─────────────────────────────────────────────────────────────────
+    // PLANNER RENDERING
+    // ─────────────────────────────────────────────────────────────────
+
+    /** Rebuild all four grade columns */
+    function renderPlanner() {
+      const grid = document.getElementById('gradeGrid');
+      grid.innerHTML = '';
+
+      for (const grade of GRADES) {
+        // Column wrapper
+        const col = document.createElement('div');
+        col.className = 'grade-col';
+        col.innerHTML = `
+          <div class="grade-col-header">
+            <h3>${GRADE_NAMES[grade]}</h3>
+            <span class="grade-badge">Grade ${grade}</span>
+            <span class="credits-count" id="credits-${grade}">0 cr</span>
+          </div>`;
+
+        // Drop zone
+        const zone = document.createElement('div');
+        zone.className     = 'drop-zone';
+        zone.dataset.grade = grade;
+        zone.addEventListener('dragover',  e => onDragOver(e, grade));
+        zone.addEventListener('dragleave', e => {
+          if (!e.currentTarget.contains(e.relatedTarget)) {
+            e.currentTarget.classList.remove('drag-over');
+          }
+        });
+        zone.addEventListener('drop', e => onDrop(e, grade));
+
+        if (plan[grade].length === 0) {
+          zone.innerHTML = '<div class="drop-hint">Drop courses here</div>';
+        } else {
+          for (const courseId of plan[grade]) {
+            const course = COURSES.find(c => c.id === courseId);
+            if (course) zone.appendChild(makePlacedCard(course, grade));
+          }
+        }
+
+        col.appendChild(zone);
+        grid.appendChild(col);
+      }
+
+      updateCredits();
+    }
+
+    /** Build a single placed-course card inside a grade column */
+    function makePlacedCard(course, grade) {
+      const card = document.createElement('div');
+      card.className  = `placed-card cat-${course.cat}`;
+      card.draggable  = true;
+      card.dataset.id = course.id;
+      card.innerHTML  = `
+        <div class="dot"></div>
+        <span class="placed-name">${course.name}</span>
+        <button class="remove-btn" title="Remove" onclick="removeCourse('${course.id}', ${grade})">✕</button>`;
+
+      card.addEventListener('dragstart', e => onDragStart(e, course.id, grade));
+      card.addEventListener('dragend',   onDragEnd);
+
+      return card;
+    }
+
+    /** Remove a course from a grade and refresh the UI */
+    function removeCourse(courseId, grade) {
+      plan[grade] = plan[grade].filter(id => id !== courseId);
+      renderPlanner();
+      renderSidebar(document.getElementById('search').value.toLowerCase().trim());
+    }
+
+
+    // ─────────────────────────────────────────────────────────────────
+    // CREDIT TRACKER
+    // ─────────────────────────────────────────────────────────────────
+
+    /** Recalculate totals and update the credit-summary bar */
+    function updateCredits() {
+      let totalCredits = 0;
+      let totalIBCs    = 0;
+      const creditsByCategory = {};
+
+      for (const grade of GRADES) {
+        let gradeCredits = 0;
+
+        for (const courseId of plan[grade]) {
+          const course = COURSES.find(c => c.id === courseId);
+          if (!course) continue;
+
+          gradeCredits += course.credits;
+          creditsByCategory[course.cat] = (creditsByCategory[course.cat] || 0) + course.credits;
+
+          if (course.ibc) totalIBCs += course.ibc;
+        }
+
+        totalCredits += gradeCredits;
+
+        const el = document.getElementById(`credits-${grade}`);
+        if (el) el.textContent = `${gradeCredits} cr`;
+      }
+
+      // Rebuild the summary pill bar
+      const categoryPills = Object.entries(creditsByCategory)
+        .map(([cat, credits]) =>
+          `<div class="credit-pill cat-${cat}">
+            <span class="tag">${CAT_LABELS[cat]}</span>
+            <b>${credits}</b>
+          </div>`)
+        .join('');
+
+      document.getElementById('creditSummary').innerHTML =
+        `<div class="credit-pill">Total <b>${totalCredits}</b> cr</div>` +
+        `<div class="credit-pill">IBC <b>${totalIBCs}</b></div>` +
+        categoryPills;
+    }
+
+
+    // ─────────────────────────────────────────────────────────────────
+    // DRAG AND DROP
+    // ─────────────────────────────────────────────────────────────────
+
+    function onDragStart(e, courseId, from) {
+      dragSource = { id: courseId, from };
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', courseId);
+
+      // Show the course name as the drag image
+      const ghost  = document.getElementById('dragGhost');
+      const course = COURSES.find(c => c.id === courseId);
+      ghost.textContent = course ? course.name : '';
+      e.dataTransfer.setDragImage(ghost, 0, 0);
+
+      // Dim the card being dragged (timeout lets the browser capture the image first)
+      setTimeout(() => e.target.classList.add('dragging'), 0);
+    }
+
+    function onDragEnd() {
+      document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+      document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      dragSource = null;
+    }
+
+    function onDragOver(e, grade) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      e.currentTarget.classList.add('drag-over');
+    }
+
+    function onDrop(e, targetGrade) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('drag-over');
+      if (!dragSource) return;
+
+      const { id, from } = dragSource;
+
+      // Remove from the source grade if dragged from a grade column (not sidebar)
+      if (typeof from === 'number') {
+        plan[from] = plan[from].filter(cid => cid !== id);
+      }
+
+      // Add to the target grade (avoid duplicates)
+      if (!plan[targetGrade].includes(id)) {
+        plan[targetGrade] = [...plan[targetGrade], id];
+      }
+
+      dragSource = null;
+      renderPlanner();
+      renderSidebar(document.getElementById('search').value.toLowerCase().trim());
+      savePlan();
+    }
+
+
+    // ─────────────────────────────────────────────────────────────────
+    // START
+    // ─────────────────────────────────────────────────────────────────
+    init();
+
+  </script>
 </body>
 </html>
