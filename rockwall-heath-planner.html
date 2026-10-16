@@ -1153,6 +1153,14 @@
       return coreqs.filter(coreqId => !sameGradeIds.includes(coreqId));
     }
 
+    function getCoreqPairIds(courseId) {
+      const direct = COURSE_COREQS[courseId] || [];
+      const reverse = Object.entries(COURSE_COREQS)
+        .filter(([, relatedIds]) => relatedIds.includes(courseId))
+        .map(([relatedId]) => relatedId);
+      return [...new Set([...direct, ...reverse])];
+    }
+
     function hasPrereqs(courseId) {
       return getMissingPrereqs(courseId).length === 0;
     }
@@ -1425,7 +1433,6 @@
 
       const { id, from } = dragSource;
       const missingReqs = getMissingPrereqs(id);
-      const missingCoreqs = getMissingCoreqs(id, targetGrade);
 
       if (missingReqs.length > 0) {
         const names = missingReqs.map(reqId => {
@@ -1437,6 +1444,7 @@
         return;
       }
 
+      const missingCoreqs = getMissingCoreqs(id, targetGrade);
       if (missingCoreqs.length > 0) {
         const names = missingCoreqs.map(coreqId => {
           const coreqCourse = COURSES.find(c => c.id === coreqId);
@@ -1452,9 +1460,15 @@
         plan[from] = plan[from].filter(cid => cid !== id);
       }
 
-      // Add to the target grade (avoid duplicates)
+      // Add the course and its paired coreq to the target grade (avoid duplicates)
+      const pairedCoreqIds = getCoreqPairIds(id).filter(coreqId => coreqId !== id);
       if (!plan[targetGrade].includes(id)) {
         plan[targetGrade] = [...plan[targetGrade], id];
+      }
+      for (const pairedId of pairedCoreqIds) {
+        if (!plan[targetGrade].includes(pairedId)) {
+          plan[targetGrade] = [...plan[targetGrade], pairedId];
+        }
       }
 
       dragSource = null;
