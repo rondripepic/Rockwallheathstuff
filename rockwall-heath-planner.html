@@ -598,6 +598,18 @@
      *  - nested combinations are supported, e.g. { allOf: ['a', { anyOf: ['b','c'] }] }
      */
     const COURSE_PREREQS = {
+      e2: ['e1', 'e1h', 'e1sg', 'e1esol'],
+      e2h: ['e1', 'e1h', 'e1sg', 'e1esol'],
+      e3: ['e2', 'e2h', 'e2sg', 'e1esol'],
+      e3ap: ['e2', 'e2h', 'e2sg', 'e1esol'],
+      e4: ['e3', 'e3ap', 'e1esol'],
+      e4ap: ['e3', 'e3ap', 'e1esol'],
+      eiblit: ['e3', 'e3ap', 'e1esol'],
+      e1302: ['e1301'],
+      e2332: ['e1301', 'e1302'],
+      e2333: ['e2332'],
+      eap_sem: ['e1', 'e1h', 'e1sg', 'e1esol'],
+      eap_res: ['eap_sem'],
       m_calcab: ['m_precalc'],
       m_calcbc: { anyOf: ['m_precalch', 'm_precalcor'] },
       m_precalc: { allOf: ['m_alg2', 'm_geo'] },
