@@ -1214,11 +1214,11 @@
         const primaryCat = getPrimaryCourseCat(course);
         const categoryLabel = getCourseCategoryLabel(course);
 
-        const blockedClass = (missingReqs.length || missingCoreqs.length) ? ' blocked' : '';
+        const blockedClass = missingReqs.length ? ' blocked' : '';
         const summerClass = wasSummerCompleted ? ' summer-complete' : '';
 
         card.className = `course-card cat-${primaryCat}${isPlaced ? ' placed' : ''}${blockedClass}${summerClass}`;
-        card.draggable = !isPlaced && !wasSummerCompleted && missingReqs.length === 0 && missingCoreqs.length === 0;
+        card.draggable = !isPlaced && !wasSummerCompleted && missingReqs.length === 0;
         card.dataset.id = course.id;
 
         const prereqText = missingReqs.length
@@ -1250,7 +1250,7 @@
           ${prereqText}
           ${coreqText}`;
 
-        if (!isPlaced && !wasSummerCompleted && missingReqs.length === 0 && missingCoreqs.length === 0) {
+        if (!isPlaced && !wasSummerCompleted && missingReqs.length === 0) {
           card.addEventListener('dragstart', e => onDragStart(e, course.id, 'sidebar'));
           card.addEventListener('dragend',   onDragEnd);
         }
@@ -1440,17 +1440,6 @@
           return reqCourse ? reqCourse.name : reqId;
         });
         showToast(`You need: ${names.join(', ')}`);
-        dragSource = null;
-        return;
-      }
-
-      const missingCoreqs = getMissingCoreqs(id, targetGrade);
-      if (missingCoreqs.length > 0) {
-        const names = missingCoreqs.map(coreqId => {
-          const coreqCourse = COURSES.find(c => c.id === coreqId);
-          return coreqCourse ? coreqCourse.name : coreqId;
-        });
-        showToast(`Co-req required in this grade: ${names.join(', ')}`);
         dragSource = null;
         return;
       }
