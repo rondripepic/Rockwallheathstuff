@@ -589,10 +589,18 @@
     const GRADES      = [9, 10, 11, 12];
     const GRADE_NAMES = { 9: '9th Grade', 10: '10th Grade', 11: '11th Grade', 12: '12th Grade' };
 
-    /** Courses that must be completed before a later course can be taken. */
+    /** Courses that must be completed before a later course can be taken.
+     * Supported patterns:
+     *  - 'id'           => one required course
+     *  - ['a', 'b']     => both required (AND)
+     *  - { anyOf: [...] } => one of these is required (OR)
+     *  - { allOf: [...] } => all of these are required (AND)
+     *  - nested combinations are supported, e.g. { allOf: ['a', { anyOf: ['b','c'] }] }
+     */
     const COURSE_PREREQS = {
       m_calcab: ['m_precalc'],
-      m_calcbc: ['m_precalch'],
+      m_calcbc: { anyOf: ['m_precalch', 'm_precalcor'] },
+      m_precalc: { allOf: ['m_alg2', 'm_geo'] },
       m_stats: ['m_alg2'],
       m_robo2: ['cte_robo1']
     };
@@ -1140,10 +1148,74 @@
       return new Set([...plan[9], ...plan[10], ...plan[11], ...plan[12]]);
     }
 
+    function isPrereqSatisfied(rule, completed) {
+      if (typeof rule === 'string') {
+        return completed.has(rule);
+      }
+
+      if (Array.isArray(rule)) {
+        if (rule.length === 0) return true;
+
+        // Arrays of strings mean ALL are required.
+        if (rule.every(item => typeof item === 'string')) {
+          return rule.every(item => completed.has(item));
+        }
+
+        // Arrays of nested rules mean ANY subgroup can satisfy the requirement.
+        return rule.some(item => isPrereqSatisfied(item, completed));
+      }
+
+      if (rule && typeof rule === 'object') {
+        if (rule.anyOf) {
+          return rule.anyOf.some(option => isPrereqSatisfied(option, completed));
+        }
+
+        if (rule.allOf) {
+          return rule.allOf.every(option => isPrereqSatisfied(option, completed));
+        }
+      }
+
+      return true;
+    }
+
     function getMissingPrereqs(courseId) {
-      const prereqs = COURSE_PREREQS[courseId] || [];
+      const rule = COURSE_PREREQS[courseId] || [];
       const completed = getCompletedCourseIds();
-      return prereqs.filter(prereqId => !completed.has(prereqId));
+
+      function flattenMissing(currentRule) {
+        if (typeof currentRule === 'string') {
+          return completed.has(currentRule) ? [] : [currentRule];
+        }
+
+        if (Array.isArray(currentRule)) {
+          if (currentRule.length === 0) return [];
+
+          if (currentRule.every(item => typeof item === 'string')) {
+            return currentRule.filter(item => !completed.has(item));
+          }
+
+          const branchResults = currentRule.map(item => flattenMissing(item));
+          return branchResults.some(result => result.length === 0)
+            ? []
+            : [...new Set(branchResults.flat())];
+        }
+
+        if (currentRule && typeof currentRule === 'object') {
+          if (currentRule.anyOf) {
+            const results = currentRule.anyOf.map(option => flattenMissing(option));
+            return results.some(result => result.length === 0) ? [] : [...new Set(results.flat())];
+          }
+
+          if (currentRule.allOf) {
+            return currentRule.allOf.flatMap(option => flattenMissing(option));
+          }
+        }
+
+        return [];
+      }
+
+      const missing = flattenMissing(rule);
+      return [...new Set(missing)];
     }
 
     function getMissingCoreqs(courseId, grade) {
