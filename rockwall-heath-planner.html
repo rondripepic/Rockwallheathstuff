@@ -239,6 +239,10 @@
       background: #fff8f7;
       opacity: .75;
     }
+    .course-card.summer-complete {
+      border-color: #a7f3d0;
+      background: #f0fdf4;
+    }
 
     .course-name {
       font-size: .82rem;
@@ -1002,6 +1006,9 @@
     /** The student's current plan: maps grade number → array of course IDs */
     let plan = { 9: [], 10: [], 11: [], 12: [] };
 
+    /** Course IDs already completed over the summer; they count as fulfilled without being in the grade plan. */
+    let summerCompleted = [];
+
     /** Which category filter tab is active */
     let activeFilter = 'all';
 
@@ -1019,6 +1026,9 @@
       try {
         const saved = localStorage.getItem('rh_plan_27');
         if (saved) plan = JSON.parse(saved);
+
+        const savedSummer = localStorage.getItem('rh_summer_completed_27');
+        if (savedSummer) summerCompleted = JSON.parse(savedSummer);
       } catch (e) { /* ignore corrupt data */ }
 
       renderSidebar();
@@ -1034,6 +1044,7 @@
     function savePlan() {
       try {
         localStorage.setItem('rh_plan_27', JSON.stringify(plan));
+        localStorage.setItem('rh_summer_completed_27', JSON.stringify(summerCompleted));
         showToast('Plan saved!');
       } catch (e) {
         showToast('Could not save.');
@@ -1043,6 +1054,7 @@
     function clearAll() {
       if (!confirm('Clear your entire plan?')) return;
       plan = { 9: [], 10: [], 11: [], 12: [] };
+      summerCompleted = [];
       renderSidebar();
       renderPlanner();
       updateCredits();
@@ -1112,6 +1124,11 @@
         .join(' / ');
     }
 
+    /** Returns a Set of every course ID that is already in the plan or completed over the summer */
+    function getCompletedCourseIds() {
+      return new Set([...plan[9], ...plan[10], ...plan[11], ...plan[12], ...summerCompleted]);
+    }
+
     /** Returns a Set of every course ID that is already in the plan */
     function getPlacedIds() {
       return new Set([...plan[9], ...plan[10], ...plan[11], ...plan[12]]);
@@ -1119,12 +1136,25 @@
 
     function getMissingPrereqs(courseId) {
       const prereqs = COURSE_PREREQS[courseId] || [];
-      const placed = getPlacedIds();
-      return prereqs.filter(prereqId => !placed.has(prereqId));
+      const completed = getCompletedCourseIds();
+      return prereqs.filter(prereqId => !completed.has(prereqId));
     }
 
     function hasPrereqs(courseId) {
       return getMissingPrereqs(courseId).length === 0;
+    }
+
+    function toggleSummerComplete(courseId) {
+      if (summerCompleted.includes(courseId)) {
+        summerCompleted = summerCompleted.filter(id => id !== courseId);
+      } else {
+        summerCompleted = [...summerCompleted, courseId];
+      }
+
+      renderSidebar(document.getElementById('search').value.toLowerCase().trim());
+      renderPlanner();
+      updateCredits();
+      savePlan();
     }
 
     /** Rebuild the sidebar course list, applying category + search filters */
@@ -1156,13 +1186,17 @@
 
       for (const course of filtered) {
         const isPlaced = placed.has(course.id);
+        const wasSummerCompleted = summerCompleted.includes(course.id);
         const missingReqs = getMissingPrereqs(course.id);
         const card     = document.createElement('div');
         const primaryCat = getPrimaryCourseCat(course);
         const categoryLabel = getCourseCategoryLabel(course);
 
-        card.className = `course-card cat-${primaryCat}${isPlaced ? ' placed' : ''}${missingReqs.length ? ' blocked' : ''}`;
-        card.draggable = !isPlaced && missingReqs.length === 0;
+        const blockedClass = missingReqs.length ? ' blocked' : '';
+        const summerClass = wasSummerCompleted ? ' summer-complete' : '';
+
+        card.className = `course-card cat-${primaryCat}${isPlaced ? ' placed' : ''}${blockedClass}${summerClass}`;
+        card.draggable = !isPlaced && !wasSummerCompleted && missingReqs.length === 0;
         card.dataset.id = course.id;
 
         const prereqText = missingReqs.length
@@ -1172,6 +1206,10 @@
             }).join(', ')}</div>`
           : '';
 
+        const summerLabel = wasSummerCompleted
+          ? '<span class="grade-tag">Summer complete</span>'
+          : '<button class="btn btn-outline" type="button" onclick="toggleSummerComplete(\'' + course.id + '\')">Mark as summer complete</button>';
+
         card.innerHTML = `
           <div class="course-name">${course.name}</div>
           <div class="course-meta">
@@ -1179,9 +1217,10 @@
             <span class="grade-tag">Gr ${course.grades.join(', ')} · ${course.credits} cr</span>
             ${isPlaced ? '<span class="grade-tag">✓ placed</span>' : ''}
           </div>
+          ${summerLabel}
           ${prereqText}`;
 
-        if (!isPlaced && missingReqs.length === 0) {
+        if (!isPlaced && !wasSummerCompleted && missingReqs.length === 0) {
           card.addEventListener('dragstart', e => onDragStart(e, course.id, 'sidebar'));
           card.addEventListener('dragend',   onDragEnd);
         }
@@ -1274,6 +1313,7 @@
       let totalCredits = 0;
       let totalIBCs    = 0;
       const creditsByCategory = {};
+      const completedIds = [...new Set([...plan[9], ...plan[10], ...plan[11], ...plan[12], ...summerCompleted])];
 
       for (const grade of GRADES) {
         let gradeCredits = 0;
@@ -1294,6 +1334,19 @@
 
         const el = document.getElementById(`credits-${grade}`);
         if (el) el.textContent = `${gradeCredits} cr`;
+      }
+
+      for (const courseId of completedIds) {
+        const course = COURSES.find(c => c.id === courseId);
+        if (!course) continue;
+
+        if (!Object.values(plan).flat().includes(courseId)) {
+          totalCredits += course.credits;
+          for (const cat of getCourseCats(course)) {
+            creditsByCategory[cat] = (creditsByCategory[cat] || 0) + course.credits;
+          }
+          if (course.ibc) totalIBCs += course.ibc;
+        }
       }
 
       // Rebuild the summary pill bar
