@@ -234,10 +234,23 @@
     }
     .course-card.dragging { opacity: .4; cursor: grabbing; }
     .course-card.placed   { opacity: .45; background: var(--bg); cursor: default; }
+    .course-card.blocked  {
+      border-color: #f4c7c1;
+      background: #fff8f7;
+      opacity: .75;
+    }
 
     .course-name {
       font-size: .82rem;
       font-weight: 500;
+      line-height: 1.3;
+    }
+
+    .prereq-note {
+      font-size: .62rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      color: #b45309;
       line-height: 1.3;
     }
 
@@ -571,6 +584,14 @@
 
     const GRADES      = [9, 10, 11, 12];
     const GRADE_NAMES = { 9: '9th Grade', 10: '10th Grade', 11: '11th Grade', 12: '12th Grade' };
+
+    /** Courses that must be completed before a later course can be taken. */
+    const COURSE_PREREQS = {
+      m_calcab: ['m_precalc'],
+      m_calcbc: ['m_precalc'],
+      m_stats: ['m_alg2'],
+      m_robo2: ['cte_robo1']
+    };
 
 
     // ─────────────────────────────────────────────────────────────────
@@ -1096,6 +1117,16 @@
       return new Set([...plan[9], ...plan[10], ...plan[11], ...plan[12]]);
     }
 
+    function getMissingPrereqs(courseId) {
+      const prereqs = COURSE_PREREQS[courseId] || [];
+      const placed = getPlacedIds();
+      return prereqs.filter(prereqId => !placed.has(prereqId));
+    }
+
+    function hasPrereqs(courseId) {
+      return getMissingPrereqs(courseId).length === 0;
+    }
+
     /** Rebuild the sidebar course list, applying category + search filters */
     function renderSidebar(query = '') {
       const listEl  = document.getElementById('courseList');
@@ -1125,22 +1156,32 @@
 
       for (const course of filtered) {
         const isPlaced = placed.has(course.id);
+        const missingReqs = getMissingPrereqs(course.id);
         const card     = document.createElement('div');
         const primaryCat = getPrimaryCourseCat(course);
         const categoryLabel = getCourseCategoryLabel(course);
 
-        card.className   = `course-card cat-${primaryCat}${isPlaced ? ' placed' : ''}`;
-        card.draggable   = !isPlaced;
-        card.dataset.id  = course.id;
-        card.innerHTML   = `
+        card.className = `course-card cat-${primaryCat}${isPlaced ? ' placed' : ''}${missingReqs.length ? ' blocked' : ''}`;
+        card.draggable = !isPlaced && missingReqs.length === 0;
+        card.dataset.id = course.id;
+
+        const prereqText = missingReqs.length
+          ? `<div class="prereq-note">Needs: ${missingReqs.map(id => {
+              const reqCourse = COURSES.find(c => c.id === id);
+              return reqCourse ? reqCourse.name : id;
+            }).join(', ')}</div>`
+          : '';
+
+        card.innerHTML = `
           <div class="course-name">${course.name}</div>
           <div class="course-meta">
             <span class="tag">${categoryLabel}</span>
             <span class="grade-tag">Gr ${course.grades.join(', ')} · ${course.credits} cr</span>
             ${isPlaced ? '<span class="grade-tag">✓ placed</span>' : ''}
-          </div>`;
+          </div>
+          ${prereqText}`;
 
-        if (!isPlaced) {
+        if (!isPlaced && missingReqs.length === 0) {
           card.addEventListener('dragstart', e => onDragStart(e, course.id, 'sidebar'));
           card.addEventListener('dragend',   onDragEnd);
         }
@@ -1308,6 +1349,17 @@
       if (!dragSource) return;
 
       const { id, from } = dragSource;
+      const missingReqs = getMissingPrereqs(id);
+
+      if (missingReqs.length > 0) {
+        const names = missingReqs.map(reqId => {
+          const reqCourse = COURSES.find(c => c.id === reqId);
+          return reqCourse ? reqCourse.name : reqId;
+        });
+        showToast(`You need: ${names.join(', ')}`);
+        dragSource = null;
+        return;
+      }
 
       // Remove from the source grade if dragged from a grade column (not sidebar)
       if (typeof from === 'number') {
