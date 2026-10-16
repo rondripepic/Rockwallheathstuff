@@ -592,9 +592,15 @@
     /** Courses that must be completed before a later course can be taken. */
     const COURSE_PREREQS = {
       m_calcab: ['m_precalc'],
-      m_calcbc: ['m_precalc'],
+      m_calcbc: ['m_precalch'],
       m_stats: ['m_alg2'],
       m_robo2: ['cte_robo1']
+    };
+
+    /** Courses that must be scheduled in the same grade level together. */
+    const COURSE_COREQS = {
+      cte_equine: ['cte_smallanim'],
+      cte_smallanim: ['cte_equine']
     };
 
 
@@ -1140,6 +1146,13 @@
       return prereqs.filter(prereqId => !completed.has(prereqId));
     }
 
+    function getMissingCoreqs(courseId, grade) {
+      const coreqs = COURSE_COREQS[courseId] || [];
+      if (!grade) return coreqs;
+      const sameGradeIds = plan[grade] || [];
+      return coreqs.filter(coreqId => !sameGradeIds.includes(coreqId));
+    }
+
     function hasPrereqs(courseId) {
       return getMissingPrereqs(courseId).length === 0;
     }
@@ -1188,21 +1201,29 @@
         const isPlaced = placed.has(course.id);
         const wasSummerCompleted = summerCompleted.includes(course.id);
         const missingReqs = getMissingPrereqs(course.id);
+        const missingCoreqs = getMissingCoreqs(course.id);
         const card     = document.createElement('div');
         const primaryCat = getPrimaryCourseCat(course);
         const categoryLabel = getCourseCategoryLabel(course);
 
-        const blockedClass = missingReqs.length ? ' blocked' : '';
+        const blockedClass = (missingReqs.length || missingCoreqs.length) ? ' blocked' : '';
         const summerClass = wasSummerCompleted ? ' summer-complete' : '';
 
         card.className = `course-card cat-${primaryCat}${isPlaced ? ' placed' : ''}${blockedClass}${summerClass}`;
-        card.draggable = !isPlaced && !wasSummerCompleted && missingReqs.length === 0;
+        card.draggable = !isPlaced && !wasSummerCompleted && missingReqs.length === 0 && missingCoreqs.length === 0;
         card.dataset.id = course.id;
 
         const prereqText = missingReqs.length
           ? `<div class="prereq-note">Needs: ${missingReqs.map(id => {
               const reqCourse = COURSES.find(c => c.id === id);
               return reqCourse ? reqCourse.name : id;
+            }).join(', ')}</div>`
+          : '';
+
+        const coreqText = missingCoreqs.length
+          ? `<div class="prereq-note">Co-req with: ${missingCoreqs.map(id => {
+              const coreqCourse = COURSES.find(c => c.id === id);
+              return coreqCourse ? coreqCourse.name : id;
             }).join(', ')}</div>`
           : '';
 
@@ -1218,9 +1239,10 @@
             ${isPlaced ? '<span class="grade-tag">✓ placed</span>' : ''}
           </div>
           ${summerLabel}
-          ${prereqText}`;
+          ${prereqText}
+          ${coreqText}`;
 
-        if (!isPlaced && !wasSummerCompleted && missingReqs.length === 0) {
+        if (!isPlaced && !wasSummerCompleted && missingReqs.length === 0 && missingCoreqs.length === 0) {
           card.addEventListener('dragstart', e => onDragStart(e, course.id, 'sidebar'));
           card.addEventListener('dragend',   onDragEnd);
         }
@@ -1403,6 +1425,7 @@
 
       const { id, from } = dragSource;
       const missingReqs = getMissingPrereqs(id);
+      const missingCoreqs = getMissingCoreqs(id, targetGrade);
 
       if (missingReqs.length > 0) {
         const names = missingReqs.map(reqId => {
@@ -1410,6 +1433,16 @@
           return reqCourse ? reqCourse.name : reqId;
         });
         showToast(`You need: ${names.join(', ')}`);
+        dragSource = null;
+        return;
+      }
+
+      if (missingCoreqs.length > 0) {
+        const names = missingCoreqs.map(coreqId => {
+          const coreqCourse = COURSES.find(c => c.id === coreqId);
+          return coreqCourse ? coreqCourse.name : coreqId;
+        });
+        showToast(`Co-req required in this grade: ${names.join(', ')}`);
         dragSource = null;
         return;
       }
