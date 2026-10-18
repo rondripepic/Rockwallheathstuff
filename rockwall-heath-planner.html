@@ -258,6 +258,27 @@
       color: #b45309;
       line-height: 1.3;
     }
+    .requirement-label {
+      display: inline-block;
+      margin-right: 4px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: #fff7ed;
+      color: #9a3412;
+      font-size: .58rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      vertical-align: 1px;
+    }
+    .requirement-label.recommendation {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+    .requirement-label.catalog-note {
+      background: #f3f4f6;
+      color: #4b5563;
+    }
 
     .course-meta {
       display: flex;
@@ -373,6 +394,11 @@
       align-items: center;
     }
     .credit-pill b { color: var(--accent); }
+    .credit-pill-button {
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
 
     /* ─── Four-year grade grid ───────────────────────────────────── */
     .grade-grid {
@@ -417,6 +443,9 @@
     }
     .credits-count.over-limit {
       color: #b91c1c;
+    }
+    .credits-count.needs-full-load {
+      color: #b45309;
     }
 
     /* Drop zone inside each grade column */
@@ -676,8 +705,11 @@
     <span>2026–2027 APG · Heath Campus</span>
     <span>Created by Carson Thummel</span>
     <div class="header-actions">
+      <button class="btn btn-outline" type="button" onclick="exportPlan()">Export Plan</button>
+      <button class="btn btn-outline" type="button" onclick="document.getElementById('importPlanFile').click()">Import Plan</button>
       <button class="btn btn-outline" onclick="clearAll()">Clear All</button>
       <button class="btn btn-primary" onclick="savePlan()">Save Plan</button>
+      <input id="importPlanFile" type="file" accept=".rhplan,.json,application/json" hidden onchange="importPlanFile(this)">
     </div>
   </header>
 
@@ -733,11 +765,13 @@
         <span id="mobileInstructionText">Tap a course above or in your plan, then tap a grade to add or move it.</span>
         <button id="mobileSelectionCancel" type="button" onclick="clearMobileSelection()" hidden>Cancel</button>
       </p>
-      <p class="tool-note">Schedule no more than 8 credits per grade. AP Computer Science A counts as 1 credit toward this limit. Use the Course level selector on eligible planned courses to switch levels.</p>
+      <p class="tool-note">Schedule no more than 8 credits per grade. Grades 9 and 10 need a full 8-credit schedule with no off periods. AP Computer Science A counts as 1 credit toward this limit. Use the Course level selector on eligible planned courses to switch levels.</p>
       <div class="planner-tools" aria-label="Planner tools">
         <button class="btn btn-primary" type="button" onclick="openTool('graduation')">Graduation Plan</button>
-        <button class="btn btn-outline" type="button" onclick="openTool('cte')">CTE Pathways</button>
-        <button class="btn btn-outline" type="button" onclick="openTool('academics')">Plan Core Academics</button>
+        <button class="btn btn-primary" type="button" onclick="openTool('planCheck')">Check My Plan</button>
+        <button class="btn btn-primary" type="button" onclick="openTool('cte')">CTE Pathways</button>
+        <button class="btn btn-primary" type="button" onclick="openTool('academics')">Plan Core Academics</button>
+        <button class="btn btn-primary" type="button" onclick="openTool('ibcs')">My IBCs</button>
       </div>
 
       <!-- Grade columns (9–12) rendered here by JS -->
@@ -858,6 +892,13 @@
       { name: 'Legal Studies Program of Study', groups: [['cte_law1'], ['cte_legalres'], ['cte_court'], ['cte_lawprac']] },
       { name: 'Marine Corps JROTC', groups: [['pe_jrotc'], ['cte_jrotc2'], ['cte_jrotc3'], ['cte_jrotc4']] }
     ];
+    const BUSINESS_CTE_PATHWAYS = new Set([
+      'Accounting and Financial Services Program of Study',
+      'Business Management Program of Study',
+      'Entrepreneurship Program of Study',
+      'Marketing and Sales Program of Study',
+      'Real Estate Program of Study'
+    ]);
     const MATH_PATH_COURSE_IDS = [
       'm_geo', 'm_geoh', ...ALGEBRA_II_COURSES, 'm_precalc', 'm_precalch', 'm_precalcor',
       'm_extalg', 'm_finmath', 'm_statsbus', 'm_calcab', 'm_calcbc', 'm_stats',
@@ -1665,6 +1706,7 @@
 
     /** Course IDs already completed over the summer; they count as fulfilled without being in the grade plan. */
     let summerCompleted = [];
+    let earnedIBCs = [];
 
     /** Which category filter tab is active */
     let activeFilter = 'all';
@@ -1692,6 +1734,15 @@
 
         const savedSummer = localStorage.getItem('rh_summer_completed_27');
         if (savedSummer) summerCompleted = JSON.parse(savedSummer);
+
+        const savedIBCs = localStorage.getItem('rh_earned_ibcs_27');
+        if (savedIBCs) {
+          const parsedIBCs = JSON.parse(savedIBCs);
+          if (!Array.isArray(parsedIBCs) || parsedIBCs.some(name => typeof name !== 'string')) {
+            throw new Error('Saved IBC list is invalid.');
+          }
+          earnedIBCs = parsedIBCs;
+        }
       } catch (e) { /* ignore corrupt data */ }
 
       migrateLegacyIBEnglishPlan();
@@ -1780,10 +1831,107 @@
       try {
         localStorage.setItem('rh_plan_27', JSON.stringify(plan));
         localStorage.setItem('rh_summer_completed_27', JSON.stringify(summerCompleted));
+        localStorage.setItem('rh_earned_ibcs_27', JSON.stringify(earnedIBCs));
         showToast('Plan saved!');
       } catch (e) {
         showToast('Could not save.');
       }
+    }
+
+    function exportPlan() {
+      const incompleteLowerGrades = [9, 10]
+        .map(grade => getFullScheduleLoadError(grade, plan[grade]))
+        .filter(Boolean);
+      if (incompleteLowerGrades.length) {
+        showToast(`Cannot export an incomplete schedule. ${incompleteLowerGrades.join(' ')}`);
+        return;
+      }
+
+      const backup = {
+        format: 'rockwall-heath-course-planner',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        plan,
+        summerCompleted,
+        earnedIBCs
+      };
+      const blobUrl = URL.createObjectURL(new Blob(
+        [JSON.stringify(backup, null, 2)],
+        { type: 'application/json' }
+      ));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = 'rockwall-heath-course-plan.rhplan';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      showToast('Plan exported!');
+    }
+
+    async function importPlanFile(input) {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      try {
+        const backup = JSON.parse(await file.text());
+        const importedPlan = validateImportedPlan(backup);
+        if (!confirm('Import this plan and replace the plan currently saved in this browser?')) return;
+
+        localStorage.setItem('rh_plan_27', JSON.stringify(importedPlan.plan));
+        localStorage.setItem('rh_summer_completed_27', JSON.stringify(importedPlan.summerCompleted));
+        localStorage.setItem('rh_earned_ibcs_27', JSON.stringify(importedPlan.earnedIBCs));
+        plan = importedPlan.plan;
+        summerCompleted = importedPlan.summerCompleted;
+        earnedIBCs = importedPlan.earnedIBCs;
+        clearMobileSelection();
+        renderSidebar(document.getElementById('search').value.toLowerCase().trim());
+        renderPlanner();
+        updateCredits();
+        showToast('Plan imported and saved!');
+      } catch (error) {
+        showToast(`Could not import plan: ${error.message}`);
+      } finally {
+        input.value = '';
+      }
+    }
+
+    function validateImportedPlan(backup) {
+      if (!backup || typeof backup !== 'object' ||
+          backup.format !== 'rockwall-heath-course-planner' || backup.version !== 1) {
+        throw new Error('This file is not a supported planner backup.');
+      }
+      if (!backup.plan || typeof backup.plan !== 'object' || Array.isArray(backup.plan)) {
+        throw new Error('The backup is missing its grade plan.');
+      }
+
+      const validCourseIds = new Set(COURSES.map(course => course.id));
+      const importedPlan = {};
+      for (const grade of GRADES) {
+        const courses = backup.plan[grade];
+        if (!Array.isArray(courses) ||
+            courses.some(courseId => typeof courseId !== 'string' || !validCourseIds.has(courseId))) {
+          throw new Error(`The Grade ${grade} course list is invalid.`);
+        }
+        importedPlan[grade] = [...new Set(courses)];
+      }
+      if (Object.keys(backup.plan).some(grade => !GRADES.includes(Number(grade)))) {
+        throw new Error('The backup contains an unsupported grade.');
+      }
+      if (!Array.isArray(backup.summerCompleted) ||
+          backup.summerCompleted.some(courseId =>
+            typeof courseId !== 'string' || !validCourseIds.has(courseId))) {
+        throw new Error('The summer-completed course list is invalid.');
+      }
+      if (backup.earnedIBCs !== undefined &&
+          (!Array.isArray(backup.earnedIBCs) ||
+            backup.earnedIBCs.some(name => typeof name !== 'string' || !name.trim()))) {
+        throw new Error('The earned IBC list is invalid.');
+      }
+
+      return {
+        plan: importedPlan,
+        summerCompleted: [...new Set(backup.summerCompleted)],
+        earnedIBCs: [...new Set((backup.earnedIBCs || []).map(name => name.trim()))]
+      };
     }
 
     function clearAll() {
@@ -1857,6 +2005,14 @@
       const load = getScheduleLoad(courseIds);
       if (load <= MAX_ANNUAL_SCHEDULE_CREDITS) return '';
       return `Grade ${grade} would have ${load} schedule credits, exceeding the ${MAX_ANNUAL_SCHEDULE_CREDITS}-credit annual limit.`;
+    }
+
+    function getFullScheduleLoadError(grade, courseIds) {
+      if (grade !== 9 && grade !== 10) return '';
+      const load = getScheduleLoad(courseIds);
+      if (load >= MAX_ANNUAL_SCHEDULE_CREDITS) return '';
+      const remaining = MAX_ANNUAL_SCHEDULE_CREDITS - load;
+      return `Grade ${grade} needs a full ${MAX_ANNUAL_SCHEDULE_CREDITS}-credit schedule with no off periods; add ${remaining} more schedule ${remaining === 1 ? 'credit' : 'credits'}.`;
     }
 
     function getPrimaryCourseCat(course) {
@@ -1963,17 +2119,36 @@
         GRADES.some(plannedGrade => plannedGrade < grade && plan[plannedGrade].includes(courseId));
     }
 
-    function getPhysicsCPrereqError(courseId, grade) {
+    function getPhysicsCPrereqError(courseId, grade, planByGrade = plan) {
       if (!PHYSICS_C_COURSES.includes(courseId)) return '';
-      if (CALCL_COURSES.some(calcId => hasCourseBeforeGrade(calcId, grade))) return '';
+      const plannedOrCompleted = new Set([
+        ...summerCompleted,
+        ...GRADES.flatMap(plannedGrade => planByGrade[plannedGrade])
+      ]);
+      return CALCL_COURSES.some(calcId => plannedOrCompleted.has(calcId))
+        ? ''
+        : 'Plan Calculus AB or BC in any grade before taking AP Physics C.';
+    }
 
-      if (hasCourseBeforeGrade('sci_apphys1', grade)) {
-        return CALCL_COURSES.some(calcId => plan[grade].includes(calcId))
-          ? ''
-          : `With prior AP Physics I credit, add Calculus AB or BC to Grade ${grade}.`;
+    function getGradeSpecificPrereqError(courseId, grade, planByGrade = plan) {
+      if (courseId !== 'sci_chemh' || grade !== 9) return '';
+      const completedBeforeGrade = new Set([
+        ...summerCompleted,
+        ...GRADES.filter(plannedGrade => plannedGrade < grade).flatMap(plannedGrade => planByGrade[plannedGrade])
+      ]);
+      const missing = [];
+      if (!ALGEBRA_II_COURSES.some(id => completedBeforeGrade.has(id))) {
+        missing.push('Algebra II');
       }
-
-      return `You need prior Calculus AB/BC credit, or prior AP Physics I credit and Calculus AB/BC in Grade ${grade}.`;
+      const hasPriorScience = COURSES.some(course =>
+        course.id !== courseId &&
+        getCourseCats(course).includes('science') &&
+        completedBeforeGrade.has(course.id)
+      );
+      if (!hasPriorScience) missing.push('a science course');
+      return missing.length
+        ? `Grade 9 Chemistry Honors requires previously completed ${missing.join(' and ')}.`
+        : '';
     }
 
     function getAdditionalPrereqError(courseId) {
@@ -2163,24 +2338,30 @@
         card.dataset.id = course.id;
 
         const prereqText = missingReqs.length
-          ? `<div class="prereq-note">Needs: ${formatMissingPrereqGroups(course.id).join('; ')}</div>`
+          ? `<div class="prereq-note"><span class="requirement-label">Prerequisite</span>${formatMissingPrereqGroups(course.id).join('; ')}</div>`
           : '';
         const additionalPrereqText = additionalPrereqError
-          ? `<div class="prereq-note">Needs: ${additionalPrereqError.replace(/^You need /, '')}</div>`
+          ? `<div class="prereq-note"><span class="requirement-label">Catalog requirement</span>${additionalPrereqError.replace(/^You need /, '')}</div>`
           : '';
         const concurrentRule = COURSE_CONCURRENT[course.id];
         const concurrentText = concurrentRule
-          ? `<div class="prereq-note">Concurrent requirement: ${formatPrerequisiteRule(concurrentRule, new Set())}.</div>`
+          ? `<div class="prereq-note"><span class="requirement-label">Concurrent</span>${formatPrerequisiteRule(concurrentRule, new Set())}.</div>`
           : '';
-        const courseNoteText = course.note
-          ? `<div class="prereq-note">${course.note}</div>`
-          : '';
+        const courseNoteText = course.note ? (() => {
+          const isRecommendation = /\brecommended\b/i.test(course.note) && !/\brequires?\b/i.test(course.note);
+          const label = isRecommendation ? 'Recommendation' : 'Catalog note';
+          const labelClass = isRecommendation ? 'recommendation' : 'catalog-note';
+          return `<div class="prereq-note"><span class="requirement-label ${labelClass}">${label}</span>${escapeHtml(course.note)}</div>`;
+        })() : '';
         const physicsCPrereqText = PHYSICS_C_COURSES.includes(course.id)
-          ? '<div class="prereq-note">Catalog requirement: prior Calculus AB/BC credit, or prior AP Physics I credit plus Calculus AB/BC in the same grade.</div>'
+          ? '<div class="prereq-note"><span class="requirement-label">Prerequisite</span>Prior Calculus AB/BC credit, or prior AP Physics I credit plus Calculus AB/BC in the same grade.</div>'
+          : '';
+        const chemistryHonorsGrade9Text = course.id === 'sci_chemh'
+          ? '<div class="prereq-note"><span class="requirement-label">Grade 9 requirement</span>Previously completed Algebra II and another science course.</div>'
           : '';
 
         const coreqText = missingCoreqs.length
-          ? `<div class="prereq-note">Co-req with: ${missingCoreqs.map(id => {
+          ? `<div class="prereq-note"><span class="requirement-label">Co-requisite</span>${missingCoreqs.map(id => {
               const coreqCourse = COURSES.find(c => c.id === id);
               return coreqCourse ? coreqCourse.name : id;
             }).join(', ')}</div>`
@@ -2213,6 +2394,7 @@
           ${concurrentText}
           ${courseNoteText}
           ${physicsCPrereqText}
+          ${chemistryHonorsGrade9Text}
           ${coreqText}`;
 
         if (canSchedule) {
@@ -2257,7 +2439,7 @@
           <div class="grade-col-header">
             <h3>${GRADE_NAMES[grade]}</h3>
             <span class="grade-badge">Grade ${grade}</span>
-            <span class="credits-count" id="credits-${grade}" title="Schedule load; AP Computer Science A counts as 1 credit toward the annual limit">0 / ${MAX_ANNUAL_SCHEDULE_CREDITS} load</span>
+            <span class="credits-count" id="credits-${grade}" title="Schedule load; Grades 9 and 10 need a full schedule with no off periods. AP Computer Science A counts as 1 credit toward the annual limit">0 / ${MAX_ANNUAL_SCHEDULE_CREDITS} load</span>
           </div>`;
 
         // Drop zone
@@ -2424,8 +2606,15 @@
         const scheduleLoad = getScheduleLoad(plan[grade]);
         const el = document.getElementById(`credits-${grade}`);
         if (el) {
-          el.textContent = `${scheduleLoad} / ${MAX_ANNUAL_SCHEDULE_CREDITS} load`;
+          const needsFullLoad = (grade === 9 || grade === 10) &&
+            scheduleLoad < MAX_ANNUAL_SCHEDULE_CREDITS;
+          const loadText = Number.isInteger(scheduleLoad) ? scheduleLoad : scheduleLoad.toFixed(1);
+          const remaining = MAX_ANNUAL_SCHEDULE_CREDITS - scheduleLoad;
+          el.textContent = needsFullLoad
+            ? `${loadText} / ${MAX_ANNUAL_SCHEDULE_CREDITS} · ${remaining} to fill`
+            : `${loadText} / ${MAX_ANNUAL_SCHEDULE_CREDITS} load`;
           el.classList.toggle('over-limit', scheduleLoad > MAX_ANNUAL_SCHEDULE_CREDITS);
+          el.classList.toggle('needs-full-load', needsFullLoad);
         }
       }
 
@@ -2453,7 +2642,8 @@
 
       document.getElementById('creditSummary').innerHTML =
         `<div class="credit-pill">Total <b>${totalCredits}</b> cr</div>` +
-        `<div class="credit-pill">IBC <b>${totalIBCs}</b></div>` +
+        `<div class="credit-pill" title="IBCs associated with planned or completed courses">Planned IBCs <b>${totalIBCs}</b></div>` +
+        `<button class="credit-pill credit-pill-button" type="button" onclick="openTool('ibcs')">Earned IBCs <b>${earnedIBCs.length}</b></button>` +
         categoryPills;
     }
 
@@ -2472,8 +2662,12 @@
       const dialog = document.getElementById('toolDialog');
       if (tool === 'graduation') {
         renderGraduationTool();
+      } else if (tool === 'planCheck') {
+        renderPlanCheck();
       } else if (tool === 'cte') {
         renderCTETool();
+      } else if (tool === 'ibcs') {
+        renderIBCTool();
       } else {
         renderAcademicTool();
       }
@@ -2488,6 +2682,75 @@
       document.getElementById('toolDialogTitle').textContent = title;
       document.getElementById('toolDialogBody').innerHTML = body;
       document.getElementById('toolDialogFooter').innerHTML = footer;
+    }
+
+    function renderIBCTool() {
+      const body = `
+        <p class="tool-note">Add certifications you have earned, including ones earned before taking a related course. Only certifications you add here appear in this earned list.</p>
+        <form class="tool-form" onsubmit="addEarnedIBC(event)">
+          <div class="tool-field" style="flex: 1">
+            <label for="earnedIBCName">Certification name</label>
+            <input id="earnedIBCName" type="text" maxlength="120" required placeholder="e.g. Unity Certified Programmer">
+          </div>
+          <button class="btn btn-primary" type="submit">Add earned IBC</button>
+        </form>
+        <div id="earnedIBCList" class="tool-results" aria-live="polite"></div>`;
+      setToolContent(
+        'My Earned Industry-Based Certifications',
+        body,
+        '<button class="btn btn-outline" type="button" onclick="closeTool()">Done</button>'
+      );
+      renderEarnedIBCList();
+    }
+
+    function renderEarnedIBCList() {
+      const list = document.getElementById('earnedIBCList');
+      if (!list) return;
+      list.innerHTML = earnedIBCs.length
+        ? `<ul class="tool-course-list">${earnedIBCs.map((name, index) =>
+            `<li>${escapeHtml(name)} <button class="btn btn-outline" type="button" onclick="removeEarnedIBC(${index})" aria-label="Remove ${escapeHtml(name)}">Remove</button></li>`
+          ).join('')}</ul>`
+        : '<p class="tool-note">No earned IBCs added yet.</p>';
+    }
+
+    function addEarnedIBC(event) {
+      event.preventDefault();
+      const input = document.getElementById('earnedIBCName');
+      const name = input.value.trim();
+      if (!name) {
+        showToast('Enter a certification name.');
+        return;
+      }
+      if (earnedIBCs.some(ibc => ibc.toLowerCase() === name.toLowerCase())) {
+        showToast('That certification is already in your earned list.');
+        return;
+      }
+      earnedIBCs = [...earnedIBCs, name];
+      try {
+        localStorage.setItem('rh_earned_ibcs_27', JSON.stringify(earnedIBCs));
+      } catch (error) {
+        earnedIBCs.pop();
+        showToast(`Could not save earned IBC: ${error.message}`);
+        return;
+      }
+      input.value = '';
+      renderEarnedIBCList();
+      updateCredits();
+      showToast('Earned IBC added.');
+    }
+
+    function removeEarnedIBC(index) {
+      if (!Number.isInteger(index) || index < 0 || index >= earnedIBCs.length) return;
+      const updatedIBCs = earnedIBCs.filter((_, itemIndex) => itemIndex !== index);
+      try {
+        localStorage.setItem('rh_earned_ibcs_27', JSON.stringify(updatedIBCs));
+      } catch (error) {
+        showToast(`Could not save earned IBC changes: ${error.message}`);
+        return;
+      }
+      earnedIBCs = updatedIBCs;
+      renderEarnedIBCList();
+      updateCredits();
     }
 
     function renderGraduationTool() {
@@ -2519,52 +2782,111 @@
       renderGraduationReport();
     }
 
+    function renderPlanCheck(classYear, planType) {
+      const selectedYear = classYear || Number(document.getElementById('planCheckClassYear')?.value || 2030);
+      const selectedType = planType || document.getElementById('planCheckPlanType')?.value || 'endorsement';
+      const yearOptions = Array.from({ length: 10 }, (_, index) => 2026 + index)
+        .map(year => `<option value="${year}"${year === selectedYear ? ' selected' : ''}>Class of ${year}</option>`)
+        .join('');
+      setToolContent(
+        'Check My Plan',
+        `<div class="tool-form">
+          <div class="tool-field">
+            <label for="planCheckClassYear">Graduating class</label>
+            <select id="planCheckClassYear" onchange="renderPlanCheck()">${yearOptions}</select>
+          </div>
+          <div class="tool-field">
+            <label for="planCheckPlanType">Graduation plan</label>
+            <select id="planCheckPlanType" onchange="renderPlanCheck()">
+              <option value="endorsement"${selectedType === 'endorsement' ? ' selected' : ''}>Foundation with Endorsement / Distinguished (26 credits)</option>
+              <option value="foundation"${selectedType === 'foundation' ? ' selected' : ''}>Foundation (22 credits)</option>
+            </select>
+          </div>
+        </div>
+        <div id="planCheckReport" class="tool-results"></div>`,
+        '<span class="tool-note">Planning guidance only; this is not official counselor approval.</span>'
+      );
+      renderPlanCheckReport(selectedYear, selectedType);
+    }
+
+    function renderPlanCheckReport(classYear, planType) {
+      const report = document.getElementById('planCheckReport');
+      if (!report) return;
+      const issues = [];
+      const addIssue = (grade, course, kind, message) => {
+        const description = `${kind}: ${message}`;
+        if (!issues.some(issue => issue.grade === grade && issue.course === course.name && issue.description === description)) {
+          issues.push({ grade, course: course.name, description });
+        }
+      };
+
+      for (const grade of GRADES) {
+        const ids = plan[grade];
+        const loadError = getScheduleLoadError(grade, ids);
+        if (loadError) issues.push({ grade, course: '', description: `Schedule limit: ${loadError}` });
+        const fullLoadError = getFullScheduleLoadError(grade, ids);
+        if (fullLoadError) issues.push({ grade, course: '', description: `Full schedule: ${fullLoadError}` });
+
+        for (const courseId of ids) {
+          const course = COURSES.find(item => item.id === courseId);
+          if (!course) continue;
+          if (!course.grades.includes(grade) && !isAcceleratedAcademicSequenceCourse(courseId)) {
+            addIssue(grade, course, 'Grade availability', `${course.name} is listed for Grades ${course.grades.join(', ')}.`);
+          }
+          const acceleratedError = getAcceleratedSequencePrereqError(courseId, grade);
+          if (acceleratedError) {
+            addIssue(grade, course, 'Prerequisite', acceleratedError);
+          } else {
+            const prerequisiteError = isScienceCourse(courseId)
+              ? getPrereqErrorForPlan(courseId)
+              : getPrereqErrorAtOrBeforeGrade(courseId, grade);
+            if (prerequisiteError) addIssue(grade, course, 'Prerequisite', prerequisiteError);
+          }
+          const concurrentError = getConcurrentPrereqError(courseId, grade, ids);
+          if (concurrentError) addIssue(grade, course, 'Concurrent requirement', concurrentError);
+          const additionalError = getAdditionalPrereqError(courseId);
+          if (additionalError) addIssue(grade, course, 'Catalog requirement', additionalError);
+          const physicsError = getPhysicsCPrereqError(courseId, grade);
+          if (physicsError) addIssue(grade, course, 'Catalog requirement', physicsError);
+          const gradeSpecificError = getGradeSpecificPrereqError(courseId, grade);
+          if (gradeSpecificError) addIssue(grade, course, 'Grade-specific requirement', gradeSpecificError);
+          const missingCoreqs = getMissingCoreqs(courseId, grade);
+          if (missingCoreqs.length) {
+            const names = missingCoreqs.map(id => COURSES.find(item => item.id === id)?.name || id);
+            addIssue(grade, course, 'Co-requisite', `Plan in the same grade: ${names.join(', ')}.`);
+          }
+        }
+      }
+
+      const requirements = getGraduationRequirements(planType, classYear);
+      const { earned, total } = getGraduationCreditSummary();
+      const gaps = requirements
+        .map(([name, category, needed]) => ({ name, remaining: Math.max(0, needed - earned[category]) }))
+        .filter(item => item.remaining > 0);
+      const totalNeeded = planType === 'foundation' ? 22 : 26;
+      const totalRemaining = Math.max(0, totalNeeded - total);
+      const issueMarkup = issues.length
+        ? `<ul class="tool-course-list">${issues.map(issue => `<li><b>${GRADE_NAMES[issue.grade]}${issue.course ? ` · ${escapeHtml(issue.course)}` : ''}</b><br>${escapeHtml(issue.description)}</li>`).join('')}</ul>`
+        : '<p class="tool-status">No modeled scheduling or prerequisite issues found.</p>';
+      const gapMarkup = gaps.length
+        ? `<ul class="tool-course-list">${gaps.map(gap => `<li>${escapeHtml(gap.name)}: ${gap.remaining} credit${gap.remaining === 1 ? '' : 's'} remaining</li>`).join('')}</ul>`
+        : '<p class="tool-status">All modeled category credit targets are met.</p>';
+      report.innerHTML = `
+        <h3>Scheduling and course requirements</h3>
+        ${issueMarkup}
+        <h3>Graduation credit progress</h3>
+        <p class="tool-status">Planned or completed: <b>${total}</b> / ${totalNeeded} credits${totalRemaining ? ` · ${totalRemaining} remaining` : ''}</p>
+        ${gapMarkup}
+        <p class="tool-note">Only requirements modeled in this planner are checked. Verify the final plan with a counselor, especially for endorsements, local requirements, and course availability.</p>`;
+    }
+
     function renderGraduationReport() {
       const report = document.getElementById('graduationReport');
       if (!report) return;
       const classYear = Number(document.getElementById('gradClassYear').value);
       const planType = document.getElementById('gradPlanType').value;
-      const requirements = planType === 'foundation'
-        ? [
-            ['English Language Arts', 'english', 4, 'English I, English II, English III, and an advanced English course. College Prep: English Language Arts is a special-education placement course and is excluded from this standard ELA count.'],
-            ['Mathematics', 'math', 3, 'Algebra I, Geometry, and Algebra II (recommended).'],
-            ['Science', 'science', 3, classYear >= 2030 ? 'Biology, Chemistry, Physics, or IPC, and one additional science course.' : 'Biology, IPC, and one additional science course.'],
-            ['Social Studies', 'ss', 3, classYear >= 2030 ? 'World Geography/History, U.S. History, Government, and Personal Financial Literacy.' : 'World Geography/History, U.S. History, Government, and Economics.'],
-            ['Physical Education', 'pe', 1, 'Physical Education credit.'],
-            ['Languages Other Than English', 'lote', 2, 'Two credits in the same language.'],
-            ['Fine Arts', 'fine', 1, 'Fine Arts credit.'],
-            ['Electives', 'elective', 5, 'Electives, including any declared endorsement requirements.']
-          ]
-        : [
-            ['English Language Arts', 'english', 4, 'English I, English II, English III, and an advanced English course. College Prep: English Language Arts is a special-education placement course and is excluded from this standard ELA count.'],
-            ['Mathematics', 'math', 4, 'Algebra I, Geometry, Algebra II, and an advanced math course.'],
-            ['Science', 'science', 4, 'Biology, Chemistry or Physics, and two additional science courses.'],
-            ['Social Studies', 'ss', 3, classYear >= 2030 ? 'World Geography/History, U.S. History, Government, and Personal Financial Literacy.' : 'World Geography/History, U.S. History, Government, and Economics.'],
-            ['Physical Education', 'pe', 1, 'Physical Education credit.'],
-            ['Languages Other Than English', 'lote', 2, 'Two credits in the same language.'],
-            ['Fine Arts', 'fine', 1, 'Fine Arts credit.'],
-            ['Electives', 'elective', 7, 'Electives, including the credit requirements of the declared endorsement.']
-          ];
-      const allIds = [...new Set([...GRADES.flatMap(grade => plan[grade]), ...summerCompleted])];
-      const earned = Object.fromEntries(requirements.map(([, category]) => [category, 0]));
-      for (const courseId of allIds) {
-        const course = COURSES.find(item => item.id === courseId);
-        if (!course) continue;
-        const categories = getCourseCats(course);
-        for (const category of Object.keys(earned)) {
-          if (category !== 'elective' && categories.includes(category)) {
-            earned[category] += course.credits;
-          }
-        }
-        const requiredCategories = ['english', 'math', 'science', 'ss', 'pe', 'lote', 'fine'];
-        if (categories.includes('elective') || !categories.some(category => requiredCategories.includes(category))) {
-          earned.elective += course.credits;
-        }
-      }
-      const total = allIds.reduce((sum, courseId) => {
-        const course = COURSES.find(item => item.id === courseId);
-        return sum + (course ? course.credits : 0);
-      }, 0);
+      const requirements = getGraduationRequirements(planType, classYear);
+      const { earned, total } = getGraduationCreditSummary();
       const rows = requirements.map(([name, category, needed, details]) => {
         const credits = earned[category];
         return `<tr><th>${escapeHtml(name)}</th><td>${needed}</td><td>${credits}</td><td>${Math.max(0, needed - credits)}</td><td>${escapeHtml(details)}</td></tr>`;
@@ -2591,15 +2913,64 @@
         ${summerNames.length ? `<h3>Summer / Previously Completed</h3><ul class="tool-course-list">${summerNames.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>` : ''}`;
     }
 
+    function getGraduationRequirements(planType, classYear) {
+      return planType === 'foundation'
+        ? [
+            ['English Language Arts', 'english', 4, 'English I, English II, English III, and an advanced English course. College Prep: English Language Arts is a special-education placement course and is excluded from this standard ELA count.'],
+            ['Mathematics', 'math', 3, 'Algebra I, Geometry, and Algebra II (recommended).'],
+            ['Science', 'science', 3, classYear >= 2030 ? 'Biology, Chemistry, Physics, or IPC, and one additional science course.' : 'Biology, IPC, and one additional science course.'],
+            ['Social Studies', 'ss', 3, classYear >= 2030 ? 'World Geography/History, U.S. History, Government, and Personal Financial Literacy.' : 'World Geography/History, U.S. History, Government, and Economics.'],
+            ['Physical Education', 'pe', 1, 'Physical Education credit.'],
+            ['Languages Other Than English', 'lote', 2, 'Two credits in the same language.'],
+            ['Fine Arts', 'fine', 1, 'Fine Arts credit.'],
+            ['Electives', 'elective', 5, 'Electives, including any declared endorsement requirements.']
+          ]
+        : [
+            ['English Language Arts', 'english', 4, 'English I, English II, English III, and an advanced English course. College Prep: English Language Arts is a special-education placement course and is excluded from this standard ELA count.'],
+            ['Mathematics', 'math', 4, 'Algebra I, Geometry, Algebra II, and an advanced math course.'],
+            ['Science', 'science', 4, 'Biology, Chemistry or Physics, and two additional science courses.'],
+            ['Social Studies', 'ss', 3, classYear >= 2030 ? 'World Geography/History, U.S. History, Government, and Personal Financial Literacy.' : 'World Geography/History, U.S. History, Government, and Economics.'],
+            ['Physical Education', 'pe', 1, 'Physical Education credit.'],
+            ['Languages Other Than English', 'lote', 2, 'Two credits in the same language.'],
+            ['Fine Arts', 'fine', 1, 'Fine Arts credit.'],
+            ['Electives', 'elective', 7, 'Electives, including the credit requirements of the declared endorsement.']
+          ];
+    }
+
+    function getGraduationCreditSummary() {
+      const allIds = [...new Set([...GRADES.flatMap(grade => plan[grade]), ...summerCompleted])];
+      const earned = { english: 0, math: 0, science: 0, ss: 0, pe: 0, lote: 0, fine: 0, elective: 0 };
+      for (const courseId of allIds) {
+        const course = COURSES.find(item => item.id === courseId);
+        if (!course) continue;
+        const categories = getCourseCats(course);
+        for (const category of Object.keys(earned)) {
+          if (category !== 'elective' && categories.includes(category)) {
+            earned[category] += course.credits;
+          }
+        }
+        const requiredCategories = ['english', 'math', 'science', 'ss', 'pe', 'lote', 'fine'];
+        if (categories.includes('elective') || !categories.some(category => requiredCategories.includes(category))) {
+          earned.elective += course.credits;
+        }
+      }
+      const total = allIds.reduce((sum, courseId) => {
+        const course = COURSES.find(item => item.id === courseId);
+        return sum + (course ? course.credits : 0);
+      }, 0);
+      return { allIds, earned, total };
+    }
+
     function renderCTETool() {
       const body = `
         <div class="tool-form">
           <div class="tool-field">
             <label for="ctePathway">Program of Study</label>
-            <select id="ctePathway" onchange="updateCTEPreview()">
+            <select id="ctePathway" onchange="updateCTEPathwayOptions()">
               ${CTE_PATHWAYS.map((pathway, index) => `<option value="${index}">${escapeHtml(pathway.name)}</option>`).join('')}
             </select>
           </div>
+          <div class="tool-field" id="ctePathwayOptions"></div>
           <div class="tool-field">
             <label for="cteStartGrade">Start pathway in</label>
             <select id="cteStartGrade" onchange="updateCTEPreview()">
@@ -2615,19 +2986,209 @@
         body,
         '<button class="btn btn-outline" type="button" onclick="closeTool()">Cancel</button><button class="btn btn-primary" type="button" onclick="applyCTEDraft()">Add pathway to plan</button>'
       );
+      updateCTEPathwayOptions();
+    }
+
+    function updateCTEPathwayOptions() {
+      const options = document.getElementById('ctePathwayOptions');
+      if (!options) return;
+      const pathway = CTE_PATHWAYS[Number(document.getElementById('ctePathway').value)];
+      const isCulinaryPathway = pathway.name === 'Culinary Arts Program of Study';
+      const healthPathwayNames = [
+        'Dental Program of Study',
+        'Emergency Medical Technician (EMT) Program of Study',
+        'Pharmacy Technician Program of Study',
+        'Medical/Internship Program of Study'
+      ];
+      const isHealthPathway = healthPathwayNames.includes(pathway.name);
+      const isSoftwarePathway = pathway.name === 'Programming and Software Development Program of Study';
+      const isEngineeringPathway = pathway.name === 'Engineering Foundations Program of Study';
+      const isVideoGamePathway = pathway.name === 'Video Game Design Program of Study';
+      const isEntrepreneurshipPathway = pathway.name === 'Entrepreneurship Program of Study';
+      const isBusinessPathway = BUSINESS_CTE_PATHWAYS.has(pathway.name);
+      const isRoboticsManufacturingPathway =
+        pathway.name === 'Robotics and Automation Technology Program of Study';
+      const principlesCourses = principlesCoursesForPathway(pathway);
+      const principleOptions = principlesCourses.length
+        ? principlesCourses.map(courseId => {
+            const course = COURSES.find(course => course.id === courseId);
+            const requiredForEntrepreneurship = isBusinessPathway && courseId === 'cte_bus1';
+            const requiredForManufacturing = isRoboticsManufacturingPathway && courseId === 'cte_mfg1';
+            const requiredForPathway =
+              (requiredForEntrepreneurship && isEntrepreneurshipPathway) || requiredForManufacturing;
+            const requirementNote = requiredForManufacturing
+              ? ' (needed for Manufacturing Engineering Technology I)'
+              : requiredForPathway ? ' (required for this pathway)' : ' (optional)';
+            return `<label><input type="checkbox" data-cte-optional-principle="${courseId}" onchange="updateCTEPreview()"${requiredForPathway ? ' checked disabled' : ''}> Include ${escapeHtml(course.name)}${requirementNote}</label>`;
+          }).join('<br>')
+        : '';
+      const optionalBusinessCourses = isBusinessPathway
+        ? `${isEntrepreneurshipPathway ? '' : '<label><input id="cteIncludeEntrepreneurship" type="checkbox" onchange="updateCTEPreview()"> Include optional Entrepreneurship</label>'}<label><input id="cteIncludeFinancialMath" type="checkbox" onchange="updateCTEPreview()"> Include optional Financial Mathematics (math credit)</label>`
+        : '';
+
+      options.innerHTML = [
+        principleOptions,
+        optionalBusinessCourses,
+        isCulinaryPathway
+          ? '<label><input id="cteIncludeFoodScience" type="checkbox" onchange="updateCTEPreview()"> Include optional Food Science (science credit)</label>'
+          : '',
+        isHealthPathway
+          ? '<label><input id="cteIncludeAnatomy" type="checkbox" onchange="updateCTEPreview()"> Include optional Anatomy and Physiology (science credit)</label>'
+          : '',
+        isVideoGamePathway
+          ? '<label for="cteVideoGameStart">Video Game Design starting option</label><select id="cteVideoGameStart" onchange="updateCTEPreview()"><option value="pav">Principles of Arts, A/V Tech & Communications in Grade 9</option><option value="digital-art">Digital Art & Animation with Video Game Design I in Grade 10</option></select>'
+          : '',
+        isSoftwarePathway
+          ? '<label><input id="cteStartAtCsp" type="checkbox" onchange="updateCTEPreview()"> Start with AP Computer Science Principles (skip Computer Science I Honors)</label>'
+          : '',
+        isEngineeringPathway
+          ? '<label><input id="cteStartAtRobotics" type="checkbox" onchange="updateCTERoboticsOptions()"> Start with Robotics I (skip Engineering Design Process)</label><label id="cteRoboticsOnlyOption" hidden><input id="cteRoboticsOnly" type="checkbox" onchange="updateCTEPreview()"> Plan Robotics I only</label><label><input id="cteIncludeRobotics2" type="checkbox" onchange="updateCTEPreview()"> Include optional Robotics II (math credit)</label><label><input id="cteIncludeProgEng" type="checkbox" onchange="updateCTEPreview()"> Include optional Programming for Engineers</label><label><input id="cteIncludeEngPracticum" type="checkbox" onchange="updateCTEPreview()"> Include optional Practicum in Engineering</label>'
+          : '',
+        isRoboticsManufacturingPathway
+          ? '<label><input id="cteIncludeManufacturingRobotics" type="checkbox" onchange="updateCTEPreview()"> Include optional Robotics I and Robotics II (math credit)</label>'
+          : ''
+      ].filter(Boolean).join('<br>');
       updateCTEPreview();
+    }
+
+    function updateCTERoboticsOptions() {
+      const startAtRobotics = document.getElementById('cteStartAtRobotics');
+      const roboticsOnlyOption = document.getElementById('cteRoboticsOnlyOption');
+      const roboticsOnly = document.getElementById('cteRoboticsOnly');
+      if (!startAtRobotics || !roboticsOnlyOption || !roboticsOnly) return;
+      roboticsOnlyOption.hidden = !startAtRobotics.checked;
+      if (!startAtRobotics.checked) roboticsOnly.checked = false;
+      updateCTEPreview();
+    }
+
+    function principlesCoursesForPathway(pathway) {
+      if (pathway.name === 'Video Game Design Program of Study') return [];
+      const principlesCourses = (pathway.groups[0] || []).filter(courseId =>
+        COURSES.find(course => course.id === courseId)?.name.startsWith('Principles of'));
+      if (BUSINESS_CTE_PATHWAYS.has(pathway.name) && !principlesCourses.includes('cte_bus1')) {
+        principlesCourses.push('cte_bus1');
+      }
+      return principlesCourses;
+    }
+
+    function getSelectedCTEPathwayGroups(pathway) {
+      let groups = pathway.groups.map(stage => [...stage]);
+      const isBusinessPathway = BUSINESS_CTE_PATHWAYS.has(pathway.name);
+      const includeEntrepreneurship = pathway.name === 'Entrepreneurship Program of Study' ||
+        document.getElementById('cteIncludeEntrepreneurship')?.checked;
+
+      if (pathway.name === 'Robotics and Automation Technology Program of Study') {
+        groups = groups.map(stage => stage.filter(id => id !== 'cte_robo1' && id !== 'm_robo2'));
+        if (document.getElementById('cteIncludeManufacturingRobotics')?.checked) {
+          groups[0].push('cte_robo1');
+          groups[1].push('m_robo2');
+        }
+      }
+
+      if (isBusinessPathway) {
+        const selectedPrinciples = new Set(
+          [...document.querySelectorAll('[data-cte-optional-principle]:checked')]
+            .map(input => input.dataset.cteOptionalPrinciple)
+        );
+        if (includeEntrepreneurship) selectedPrinciples.add('cte_bus1');
+        groups[0] = groups[0].filter(id =>
+          !principlesCoursesForPathway(pathway).includes(id) || selectedPrinciples.has(id));
+        if (selectedPrinciples.has('cte_bus1') && !groups.some(stage => stage.includes('cte_bus1'))) {
+          groups.unshift(['cte_bus1']);
+        }
+        if (pathway.name === 'Business Management Program of Study' &&
+            !selectedPrinciples.has('cte_bus1')) {
+          groups[0].push('cte_bustech1');
+        }
+
+        if (includeEntrepreneurship && pathway.name !== 'Entrepreneurship Program of Study') {
+          if (pathway.name === 'Real Estate Program of Study') {
+            if (!groups[0].includes('cte_bus1')) groups.unshift(['cte_bus1']);
+            groups[1] = [...groups[1], 'cte_entrep'];
+          } else {
+            const stageIndex = {
+              'Accounting and Financial Services Program of Study': 2,
+              'Business Management Program of Study': 1,
+              'Marketing and Sales Program of Study': 1
+            }[pathway.name];
+            groups[stageIndex].push('cte_entrep');
+          }
+        }
+
+        if (document.getElementById('cteIncludeFinancialMath')?.checked) {
+          const stageIndex = {
+            'Accounting and Financial Services Program of Study': 2,
+            'Business Management Program of Study': 1,
+            'Entrepreneurship Program of Study': 1,
+            'Marketing and Sales Program of Study': 1,
+            'Real Estate Program of Study': groups.findIndex(stage => stage.includes('cte_realty'))
+          }[pathway.name];
+          groups[stageIndex].push('m_finmath');
+        }
+      } else {
+        const selectedPrinciples = new Set(
+          [...document.querySelectorAll('[data-cte-optional-principle]:checked')]
+            .map(input => input.dataset.cteOptionalPrinciple)
+        );
+        groups[0] = groups[0].filter(id =>
+          !principlesCoursesForPathway(pathway).includes(id) || selectedPrinciples.has(id));
+      }
+
+      if (pathway.name === 'Culinary Arts Program of Study' &&
+          document.getElementById('cteIncludeFoodScience')?.checked) {
+        groups[2] = [...(groups[2] || []), 'sci_food'];
+      }
+      const healthPathwayStage = {
+        'Dental Program of Study': 2,
+        'Emergency Medical Technician (EMT) Program of Study': 2,
+        'Pharmacy Technician Program of Study': 2,
+        'Medical/Internship Program of Study': 2
+      }[pathway.name];
+      if (healthPathwayStage !== undefined &&
+          document.getElementById('cteIncludeAnatomy')?.checked) {
+        groups[healthPathwayStage] = [...(groups[healthPathwayStage] || []), 'sci_anat'];
+      }
+      if (document.getElementById('cteStartAtCsp')?.checked &&
+          pathway.name === 'Programming and Software Development Program of Study') {
+        groups = pathway.groups.slice(1).map(stage => [...stage]);
+      }
+      if (pathway.name === 'Video Game Design Program of Study' &&
+          document.getElementById('cteVideoGameStart')?.value === 'digital-art') {
+        groups = [['fa_digianim', 'cte_vgd1'], ...pathway.groups.slice(2).map(stage => [...stage])];
+      }
+      if (document.getElementById('cteStartAtRobotics')?.checked &&
+          pathway.name === 'Engineering Foundations Program of Study') {
+        groups[0] = ['cte_robo1'];
+        if (document.getElementById('cteRoboticsOnly')?.checked) {
+          return [['cte_robo1']];
+        }
+      }
+      if (pathway.name === 'Engineering Foundations Program of Study') {
+        const optionalCourses = [
+          ['cteIncludeRobotics2', 'm_robo2'],
+          ['cteIncludeProgEng', 'cte_progeng'],
+          ['cteIncludeEngPracticum', 'cte_engprac']
+        ];
+        for (const [checkboxId, courseId] of optionalCourses) {
+          if (!document.getElementById(checkboxId)?.checked) {
+            groups = groups.map(stage => stage.filter(id => id !== courseId));
+          }
+        }
+      }
+      return groups;
     }
 
     function updateCTEPreview() {
       const preview = document.getElementById('ctePreview');
       if (!preview) return;
       const pathway = CTE_PATHWAYS[Number(document.getElementById('ctePathway').value)];
+      const pathwayGroups = getSelectedCTEPathwayGroups(pathway);
       const startGrade = Number(document.getElementById('cteStartGrade').value);
       cteDraft = [];
       cteDraftNotes = [];
       let previousStageGrade = startGrade - 1;
 
-      pathway.groups.forEach((stage, stageIndex) => {
+      pathwayGroups.forEach((stage, stageIndex) => {
         const stageCourses = stage.map(courseId => COURSES.find(course => course.id === courseId)).filter(Boolean);
         if (!stageCourses.length) return;
         const preferredGrade = Math.max(startGrade + stageIndex, previousStageGrade);
@@ -2858,6 +3419,16 @@
       const subject = ACADEMIC_SUBJECTS[subjectKey];
       const previousStart = startSelect.value;
       const previousGoal = goalSelect.value;
+      const previousGoalGrade = gradeSelect.value;
+      const freshmanGradeOption = gradeSelect.querySelector('option[value="9"]');
+      if (subjectKey === 'science' && !freshmanGradeOption) {
+        gradeSelect.insertAdjacentHTML('afterbegin', '<option value="9">9th Grade (Freshman year)</option>');
+      } else if (subjectKey !== 'science' && freshmanGradeOption) {
+        freshmanGradeOption.remove();
+      }
+      gradeSelect.value = [...gradeSelect.options].some(option => option.value === previousGoalGrade)
+        ? previousGoalGrade
+        : '12';
       const goalGrade = Number(gradeSelect.value);
       const startField = document.getElementById('academicStartField');
       const subjectNote = document.getElementById('academicSubjectNote');
@@ -2875,7 +3446,7 @@
       startField.hidden = subjectKey === 'science' && Boolean(alreadySelectedBiologyId);
       if (subjectNote) {
         subjectNote.textContent = subjectKey === 'science'
-          ? 'Before building a science sequence, plan your math sequence first. Math prerequisites can affect which science courses fit. The suggested path follows modeled prerequisites; confirm choices with your counselor.'
+          ? 'Science courses may be planned in any grade when their modeled prerequisites are included anywhere in the plan, even in a different grade. Grade 9 Chemistry Honors still requires previously completed Algebra II and another science course. Confirm choices with your counselor.'
           : 'Build a course sequence for English, math, science, social studies, or LOTE. The suggested path follows catalog prerequisites where modeled. Existing courses are never removed. Confirm your final course choices and graduation requirements with your counselor.';
       }
       const previousStartIsValid = starts.some(course => course.id === previousStart);
@@ -2907,7 +3478,7 @@
       const goals = eligibleEnglishGoals
         .map(id => COURSES.find(course => course.id === id))
         .filter(course => course &&
-          (['math', 'lote'].includes(subjectKey) || course.grades.includes(goalGrade)) &&
+          (['math', 'lote', 'science'].includes(subjectKey) || course.grades.includes(goalGrade)) &&
           course.id !== startId && !completedBeforeStart.has(course.id));
       const goalId = goals.some(course => course.id === previousGoal) ? previousGoal : goals[0]?.id || '';
       goalSelect.innerHTML = goals.map(course =>
@@ -2931,7 +3502,7 @@
       const existingMathIds = plan[grade].filter(isCoreMathSequenceCourse);
       const scienceOptions = SCIENCE_CREDIT_COURSES.filter(id => {
         const course = COURSES.find(item => item.id === id);
-        return course && course.grades.includes(grade) && !BIOLOGY_COURSES.includes(id) &&
+        return course && !BIOLOGY_COURSES.includes(id) &&
           id !== startId && id !== goalId;
       });
       const mathOptions = existingMathIds.length
@@ -2963,15 +3534,21 @@
       return CORE_MATH_SEQUENCE_IDS.includes(courseId);
     }
 
+    function isScienceCourse(courseId) {
+      const course = COURSES.find(item => item.id === courseId);
+      return Boolean(course && getCourseCats(course).includes('science'));
+    }
+
     function isAcceleratedAcademicSequenceCourse(courseId) {
       const course = COURSES.find(item => item.id === courseId);
       return isCoreMathSequenceCourse(courseId) ||
+        isScienceCourse(courseId) ||
         Boolean(course && getCourseCats(course).includes('lote'));
     }
 
-    function getAcceleratedSequencePrereqError(courseId, grade) {
-      if (!isAcceleratedAcademicSequenceCourse(courseId)) return '';
-      return getPrereqErrorBeforeGrade(courseId, grade);
+    function getAcceleratedSequencePrereqError(courseId, grade, planByGrade = plan) {
+      if (!isAcceleratedAcademicSequenceCourse(courseId) || isScienceCourse(courseId)) return '';
+      return getPrereqErrorBeforeGrade(courseId, grade, planByGrade);
     }
 
     function getPrereqErrorBeforeGrade(courseId, grade, planByGrade = plan) {
@@ -3170,8 +3747,11 @@
       if (subjectKey === 'math') return findMathPath(startId, targetId, targetGrade);
       const start = COURSES.find(course => course.id === startId);
       const target = COURSES.find(course => course.id === targetId);
-      if (!start || !target || startId === targetId ||
-          (subjectKey !== 'lote' && !target.grades.includes(targetGrade))) return null;
+      if (!start || !target || startId === targetId) return null;
+      if (subjectKey === 'science' && targetGrade === 9) {
+        return { ids: [targetId], grades: [targetGrade] };
+      }
+      if (subjectKey !== 'lote' && subjectKey !== 'science' && !target.grades.includes(targetGrade)) return null;
 
       if (subjectKey === 'english') {
         const chooseEnglishTwo = isAp => {
@@ -3291,10 +3871,10 @@
           const possibleGrades = isGoal
             ? [targetGrade]
             : GRADES.filter(grade => grade > lastGrade && grade < targetGrade &&
-              (subjectKey === 'lote' || candidate.grades.includes(grade)));
+              (['lote', 'science'].includes(subjectKey) || candidate.grades.includes(grade)));
           for (const grade of possibleGrades) {
             if (grade <= lastGrade ||
-                (subjectKey !== 'lote' && !candidate.grades.includes(grade))) continue;
+                (!['lote', 'science'].includes(subjectKey) && !candidate.grades.includes(grade))) continue;
             const next = { ids: [...current.ids, candidateId], grades: [...current.grades, grade] };
             if (isGoal) {
               if (subjectKey === 'science' && PHYSICS_C_COURSES.includes(targetId)) {
@@ -3373,14 +3953,20 @@
       }
       const sciencePrereqErrors = subjectKey === 'science'
         ? [...new Set(academicDraft.ids.flatMap((id, index) => {
-            const ruleError = getPrereqErrorAtOrBeforeGrade(id, academicDraft.grades[index], proposedPlan);
-            if (ruleError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${ruleError}`];
-            if (isCoreMathSequenceCourse(id)) {
-              const mathError = getPrereqErrorBeforeGrade(id, academicDraft.grades[index], proposedPlan);
-              if (mathError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${mathError}`];
-            }
-            return [];
-          }))]
+          const gradeSpecificError = getGradeSpecificPrereqError(id, academicDraft.grades[index], proposedPlan);
+          if (gradeSpecificError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${gradeSpecificError}`];
+          const acceleratedError = getAcceleratedSequencePrereqError(id, academicDraft.grades[index], proposedPlan);
+          if (acceleratedError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${acceleratedError}`];
+          const ruleError = isScienceCourse(id)
+            ? getPrereqErrorForPlan(id, proposedPlan)
+            : getPrereqErrorAtOrBeforeGrade(id, academicDraft.grades[index], proposedPlan);
+          if (ruleError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${ruleError}`];
+          if (isCoreMathSequenceCourse(id)) {
+            const mathError = getPrereqErrorBeforeGrade(id, academicDraft.grades[index], proposedPlan);
+            if (mathError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${mathError}`];
+          }
+          return [];
+        }))]
         : [];
       const multipleAlgebraIIChoices = subjectKey === 'science' &&
         academicDraft.ids.filter(id => ALGEBRA_II_COURSES.includes(id)).length > 1;
@@ -3492,7 +4078,13 @@
           return;
         }
         const missingScienceRequirements = [...new Set(academicDraft.ids.flatMap((id, index) => {
-          const ruleError = getPrereqErrorAtOrBeforeGrade(id, academicDraft.grades[index], proposedPlan);
+          const gradeSpecificError = getGradeSpecificPrereqError(id, academicDraft.grades[index], proposedPlan);
+          if (gradeSpecificError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${gradeSpecificError}`];
+          const acceleratedError = getAcceleratedSequencePrereqError(id, academicDraft.grades[index], proposedPlan);
+          if (acceleratedError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${acceleratedError}`];
+          const ruleError = isScienceCourse(id)
+            ? getPrereqErrorForPlan(id, proposedPlan)
+            : getPrereqErrorAtOrBeforeGrade(id, academicDraft.grades[index], proposedPlan);
           if (ruleError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${ruleError}`];
           if (isCoreMathSequenceCourse(id)) {
             const mathError = getPrereqErrorBeforeGrade(id, academicDraft.grades[index], proposedPlan);
@@ -3576,6 +4168,7 @@
       const missingReqs = getMissingPrereqs(id);
       const acceleratedPrereqError = getAcceleratedSequencePrereqError(id, targetGrade);
       const physicsCPrereqError = getPhysicsCPrereqError(id, targetGrade);
+      const gradeSpecificPrereqError = getGradeSpecificPrereqError(id, targetGrade);
       const additionalPrereqError = getAdditionalPrereqError(id);
 
       if (acceleratedPrereqError) {
@@ -3590,6 +4183,11 @@
 
       if (physicsCPrereqError) {
         showToast(physicsCPrereqError);
+        return false;
+      }
+
+      if (gradeSpecificPrereqError) {
+        showToast(gradeSpecificPrereqError);
         return false;
       }
 
@@ -3629,9 +4227,14 @@
       for (const scheduledId of proposedPlan[targetGrade]) {
         const scheduledCourse = COURSES.find(item => item.id === scheduledId);
         if (!scheduledCourse || !getCourseCats(scheduledCourse).includes('science')) continue;
-        const sciencePrereqError = getPrereqErrorAtOrBeforeGrade(scheduledId, targetGrade, proposedPlan);
+        const sciencePrereqError = getPrereqErrorForPlan(scheduledId, proposedPlan);
         if (sciencePrereqError) {
           showToast(`${scheduledCourse.name}: ${sciencePrereqError}`);
+          return false;
+        }
+        const gradeSpecificPrereqError = getGradeSpecificPrereqError(scheduledId, targetGrade, proposedPlan);
+        if (gradeSpecificPrereqError) {
+          showToast(gradeSpecificPrereqError);
           return false;
         }
       }
