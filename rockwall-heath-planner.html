@@ -765,7 +765,7 @@
         <span id="mobileInstructionText">Tap a course above or in your plan, then tap a grade to add or move it.</span>
         <button id="mobileSelectionCancel" type="button" onclick="clearMobileSelection()" hidden>Cancel</button>
       </p>
-      <p class="tool-note">Schedule no more than 8 credits per grade. Grades 9 and 10 need a full 8-credit schedule with no off periods. AP Computer Science A counts as 1 credit toward this limit. Use the Course level selector on eligible planned courses to switch levels.</p>
+      <p class="tool-note">Schedule no more than 8 periods per grade. Grades 9 and 10 need a full 8-period schedule with no off periods. AP Computer Science A and the AP Physics C: Mechanics + E&amp;M pair each count as 1 period toward this limit (AP Physics C awards 2 credits total). Use the Course level selector on eligible planned courses to switch levels.</p>
       <div class="planner-tools" aria-label="Planner tools">
         <button class="btn btn-primary" type="button" onclick="openTool('graduation')">Graduation Plan</button>
         <button class="btn btn-primary" type="button" onclick="openTool('planCheck')">Check My Plan</button>
@@ -1995,7 +1995,14 @@
     }
 
     function getScheduleLoad(courseIds) {
+      const counted = new Set();
       return courseIds.reduce((total, courseId) => {
+        if (counted.has(courseId)) return total;
+        if (PHYSICS_C_COURSES.includes(courseId)) {
+          PHYSICS_C_COURSES.forEach(id => counted.add(id));
+          return total + 1;
+        }
+        counted.add(courseId);
         const course = COURSES.find(item => item.id === courseId);
         if (!course) return total;
         return total + (courseId === 'lot_csa' ? 1 : course.credits);
@@ -2005,7 +2012,7 @@
     function getScheduleLoadError(grade, courseIds) {
       const load = getScheduleLoad(courseIds);
       if (load <= MAX_ANNUAL_SCHEDULE_CREDITS) return '';
-      return `Grade ${grade} would have ${load} schedule credits, exceeding the ${MAX_ANNUAL_SCHEDULE_CREDITS}-credit annual limit.`;
+      return `Grade ${grade} would have ${load} schedule periods, exceeding the ${MAX_ANNUAL_SCHEDULE_CREDITS}-period annual limit.`;
     }
 
     function getFullScheduleLoadError(grade, courseIds) {
@@ -2013,7 +2020,7 @@
       const load = getScheduleLoad(courseIds);
       if (load >= MAX_ANNUAL_SCHEDULE_CREDITS) return '';
       const remaining = MAX_ANNUAL_SCHEDULE_CREDITS - load;
-      return `Grade ${grade} needs a full ${MAX_ANNUAL_SCHEDULE_CREDITS}-credit schedule with no off periods; add ${remaining} more schedule ${remaining === 1 ? 'credit' : 'credits'}.`;
+      return `Grade ${grade} needs a full ${MAX_ANNUAL_SCHEDULE_CREDITS}-period schedule with no off periods; add ${remaining} more ${remaining === 1 ? 'period' : 'periods'}.`;
     }
 
     function getPrimaryCourseCat(course) {
@@ -2367,6 +2374,9 @@
               return coreqCourse ? coreqCourse.name : id;
             }).join(', ')}</div>`
           : '';
+        const physicsCPairLabel = PHYSICS_C_COURSES.includes(course.id)
+          ? '<span class="grade-tag">Paired: 1 period, 2 credits total</span>'
+          : '';
 
         const summerLabel = wasSummerCompleted
           ? '<span class="grade-tag">Summer complete</span><button class="btn btn-outline" type="button" onclick="toggleSummerComplete(\'' + course.id + '\')">Remove summer completion</button>'
@@ -2385,6 +2395,7 @@
           <div class="course-meta">
             <span class="tag">${categoryLabel}</span>
             <span class="grade-tag">Gr ${course.grades.join(', ')} · ${course.credits} cr</span>
+            ${physicsCPairLabel}
             ${blockLabel}
             ${isPlaced ? '<span class="grade-tag">✓ placed</span>' : ''}
           </div>
@@ -2440,7 +2451,7 @@
           <div class="grade-col-header">
             <h3>${GRADE_NAMES[grade]}</h3>
             <span class="grade-badge">Grade ${grade}</span>
-            <span class="credits-count" id="credits-${grade}" title="Schedule load; Grades 9 and 10 need a full schedule with no off periods. AP Computer Science A counts as 1 credit toward the annual limit">0 / ${MAX_ANNUAL_SCHEDULE_CREDITS} load</span>
+            <span class="credits-count" id="credits-${grade}" title="Schedule load in periods; Grades 9 and 10 need a full schedule with no off periods">0 / ${MAX_ANNUAL_SCHEDULE_CREDITS} load</span>
           </div>`;
 
         // Drop zone
@@ -2507,6 +2518,7 @@
         <div class="dot"></div>
         <span class="placed-details">
           <span class="placed-name">${course.name}</span>
+          ${PHYSICS_C_COURSES.includes(course.id) ? '<span class="grade-tag">Paired: 1 period, 2 credits total</span>' : ''}
           ${isDoubleBlocked(course) ? '<span class="grade-tag">Double-blocked</span>' : ''}
         </span>
         ${levelSelector}
@@ -2567,7 +2579,13 @@
 
     /** Remove a course from a grade and refresh the UI */
     function removeCourse(courseId, grade) {
-      plan[grade] = plan[grade].filter(id => id !== courseId);
+      const removedIds = PHYSICS_C_COURSES.includes(courseId)
+        ? [courseId, ...getCoreqPairIds(courseId)]
+        : [courseId];
+      const gradesToUpdate = PHYSICS_C_COURSES.includes(courseId) ? GRADES : [grade];
+      for (const plannedGrade of gradesToUpdate) {
+        plan[plannedGrade] = plan[plannedGrade].filter(id => !removedIds.includes(id));
+      }
       if (selectedMobileCourse?.id === courseId && selectedMobileCourse.from === grade) {
         clearMobileSelection();
       }
@@ -4199,14 +4217,22 @@
 
       const updatedGrades = new Set([targetGrade]);
       const proposedPlan = Object.fromEntries(GRADES.map(grade => [grade, [...plan[grade]]]));
+      const pairedCoreqIds = getCoreqPairIds(id).filter(coreqId => coreqId !== id);
+      const movingIds = PHYSICS_C_COURSES.includes(id) ? [id, ...pairedCoreqIds] : [id];
       if (typeof from === 'number') {
         updatedGrades.add(from);
       }
-      if (typeof from === 'number' && from !== targetGrade) {
-        proposedPlan[from] = proposedPlan[from].filter(cid => cid !== id);
+      if (PHYSICS_C_COURSES.includes(id)) {
+        for (const grade of GRADES) {
+          if (proposedPlan[grade].some(cid => movingIds.includes(cid))) {
+            updatedGrades.add(grade);
+            proposedPlan[grade] = proposedPlan[grade].filter(cid => !movingIds.includes(cid));
+          }
+        }
+      } else if (typeof from === 'number' && from !== targetGrade) {
+        proposedPlan[from] = proposedPlan[from].filter(cid => !movingIds.includes(cid));
       }
 
-      const pairedCoreqIds = getCoreqPairIds(id).filter(coreqId => coreqId !== id);
       if (!proposedPlan[targetGrade].includes(id)) {
         proposedPlan[targetGrade].push(id);
       }
