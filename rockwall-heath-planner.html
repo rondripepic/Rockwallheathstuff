@@ -304,6 +304,54 @@
       font-size: 1.15rem;
     }
 
+    .planner-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tool-dialog {
+      width: min(780px, calc(100vw - 32px));
+      max-height: 85vh;
+      margin: auto;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      box-shadow: 0 16px 48px rgba(0,0,0,.25);
+    }
+    .tool-dialog::backdrop { background: rgba(0,0,0,.5); }
+    .tool-dialog-header, .tool-dialog-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tool-dialog-footer { border-top: 1px solid var(--border); border-bottom: 0; }
+    .tool-dialog-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.15rem; }
+    .tool-dialog .btn-outline { color: var(--text); border-color: var(--border); }
+    .tool-dialog .btn-outline:hover { color: var(--text); border-color: var(--accent); }
+    .tool-dialog-body { padding: 18px; overflow-y: auto; }
+    .tool-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-bottom: 16px; }
+    .tool-field { display: flex; flex-direction: column; gap: 5px; }
+    .tool-field label { font-size: .75rem; font-weight: 600; }
+    .tool-field select { min-width: 180px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); font: inherit; }
+    .science-concurrent-field { flex-basis: 100%; align-items: flex-start; }
+    .science-concurrent-options { display: flex; flex-wrap: wrap; gap: 7px 14px; }
+    .science-concurrent-options label { display: flex; align-items: center; gap: 5px; font-size: .72rem; font-weight: 400; }
+    .science-concurrent-options input { margin: 0; }
+    .tool-note { margin: 10px 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+    .tool-results { display: grid; gap: 12px; }
+    .tool-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .tool-table th, .tool-table td { padding: 8px; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+    .tool-table th { background: var(--bg); }
+    .tool-course-list { margin: 6px 0 0; padding-left: 18px; }
+    .tool-status { padding: 10px; border-radius: 7px; background: var(--accent-light); color: var(--accent); font-size: .8rem; }
+    .tool-status.warning { background: #fff7ed; color: #9a3412; }
+    .tool-close { font-size: 1.2rem; line-height: 1; padding: 5px 9px; }
+
     /* Credit summary pills in header */
     .credit-summary {
       display: flex;
@@ -366,6 +414,9 @@
       color: var(--accent);
       font-weight: 500;
     }
+    .credits-count.over-limit {
+      color: #b91c1c;
+    }
 
     /* Drop zone inside each grade column */
     .drop-zone {
@@ -398,6 +449,7 @@
       background: var(--bg);
       border: 1px solid var(--border);
       display: flex;
+      flex-wrap: wrap;
       align-items: flex-start;
       gap: 8px;
       cursor: grab;
@@ -428,7 +480,33 @@
       font-size: .78rem;
       font-weight: 500;
       line-height: 1.3;
+    }
+
+    .placed-details {
+      display: flex;
       flex: 1;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .placed-level-label {
+      display: flex;
+      flex-basis: 100%;
+      flex-direction: column;
+      gap: 3px;
+      margin-left: 16px;
+      color: var(--muted);
+      font-size: .62rem;
+    }
+    .placed-level-select {
+      max-width: 100%;
+      padding: 3px 5px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: .68rem;
     }
 
     .remove-btn {
@@ -488,6 +566,22 @@
       .sidebar    { height: 300px; }
       .grade-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    @media print {
+      body * { visibility: hidden !important; }
+      #toolDialog[open], #toolDialog[open] * { visibility: visible !important; }
+      #toolDialog[open] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        overflow: visible;
+        border: 0;
+        box-shadow: none;
+      }
+      #toolDialogFooter, #toolDialog .tool-close { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -498,6 +592,7 @@
   <header>
     <h1>Rockwall-Heath Course Planner</h1>
     <span>2026–2027 APG · Heath Campus</span>
+    <span>Created by Carson Thummel</span>
     <div class="header-actions">
       <button class="btn btn-outline" onclick="clearAll()">Clear All</button>
       <button class="btn btn-primary" onclick="savePlan()">Save Plan</button>
@@ -552,6 +647,12 @@
         <!-- Credit totals rendered here by JS -->
         <div class="credit-summary" id="creditSummary"></div>
       </div>
+      <p class="tool-note">Schedule no more than 8 credits per grade. AP Computer Science A counts as 1 credit toward this limit. Use the Course level selector on eligible planned courses to switch levels.</p>
+      <div class="planner-tools" aria-label="Planner tools">
+        <button class="btn btn-primary" type="button" onclick="openTool('graduation')">Graduation Plan</button>
+        <button class="btn btn-outline" type="button" onclick="openTool('cte')">CTE Pathways</button>
+        <button class="btn btn-outline" type="button" onclick="openTool('academics')">Plan Core Academics</button>
+      </div>
 
       <!-- Grade columns (9–12) rendered here by JS -->
       <div class="grade-grid" id="gradeGrid"></div>
@@ -559,6 +660,15 @@
     </main>
 
   </div><!-- /.app -->
+
+  <dialog class="tool-dialog" id="toolDialog" aria-labelledby="toolDialogTitle">
+    <div class="tool-dialog-header">
+      <h2 id="toolDialogTitle"></h2>
+      <button class="btn btn-outline tool-close" type="button" aria-label="Close" onclick="closeTool()">×</button>
+    </div>
+    <div class="tool-dialog-body" id="toolDialogBody"></div>
+    <div class="tool-dialog-footer" id="toolDialogFooter"></div>
+  </dialog>
 
   <!-- Hidden element used as the custom drag image -->
   <div class="drag-ghost" id="dragGhost"></div>
@@ -587,7 +697,136 @@
     };
 
     const GRADES      = [9, 10, 11, 12];
+    const MAX_ANNUAL_SCHEDULE_CREDITS = 8;
     const GRADE_NAMES = { 9: '9th Grade', 10: '10th Grade', 11: '11th Grade', 12: '12th Grade' };
+    const ALGEBRA_II_COURSES = ['m_alg2', 'm_alg2h', 'm_alg2or'];
+    const PRECALC_COURSES = ['m_precalc', 'm_precalch', 'm_precalcor'];
+    const GEOMETRY_COURSES = ['m_geo', 'm_geoh'];
+    const CALCL_COURSES = ['m_calcab', 'm_calcbc'];
+    const SCIENCE_CREDIT_COURSES = [
+      'sci_ipc', 'sci_chem', 'sci_chemh', 'sci_bio', 'sci_bioh', 'sci_biosg',
+      'sci_phys', 'sci_aqua', 'sci_earth', 'sci_apbio', 'sci_apphys1', 'sci_apphys2',
+      'sci_apchem', 'sci_appmc', 'sci_appe', 'sci_apenv', 'sci_orgeo', 'sci_ibbio',
+      'sci_ibenv', 'sci_ibphys', 'sci_anat', 'sci_foren', 'sci_food', 'sci_applphys',
+      'sci_uav1', 'sci_advanim'
+    ];
+    const BIOLOGY_COURSES = ['sci_bio', 'sci_bioh', 'sci_biosg'];
+    const CHEMISTRY_COURSES = ['sci_chem', 'sci_chemh'];
+    const PHYSICS_C_COURSES = ['sci_appmc', 'sci_appe'];
+    const PHYSICS_OR_APPLIED_PHYSICS_COURSES = ['sci_phys', 'sci_applphys'];
+    const ADVANCED_SOCIAL_STUDIES_COURSES = [
+      'ss_geoh', 'ss_aphug', 'ss_apwh', 'ss_apeu', 'ss_apus',
+      'ss_apgov', 'ss_apmacro', 'ss_apmicro'
+    ];
+    const COURSE_LEVEL_GROUPS = [
+      ['e1', 'e1h', 'e1sg'],
+      ['e2', 'e2h', 'e2sg'],
+      ['e3', 'e3ap'],
+      ['e4', 'e4ap'],
+      ['m_geo', 'm_geoh'],
+      ['m_alg2', 'm_alg2h', 'm_alg2or'],
+      ['m_precalc', 'm_precalch', 'm_precalcor'],
+      ['sci_bio', 'sci_bioh', 'sci_biosg'],
+      ['sci_chem', 'sci_chemh'],
+      ['ss_geo', 'ss_geoh'],
+      ['lot_sp1', 'lot_sp1ns'],
+      ['lot_sp2', 'lot_sp2h', 'lot_sp2ns'],
+      ['lot_fr2', 'lot_fr2h']
+    ];
+    const AGRICULTURE_COURSES = [
+      'cte_agri1', 'cte_agrmech', 'cte_agrpower', 'cte_agrfab',
+      'cte_floral1', 'cte_floral2', 'cte_equine', 'cte_smallanim', 'cte_livestock'
+    ];
+    const ENGINEERING_COURSES = [
+      'cte_eng1', 'cte_robo1', 'cte_engdes', 'cte_engdes2',
+      'cte_progeng', 'cte_engprac', 'cte_uav2'
+    ];
+    const CTE_PATHWAYS = [
+      { name: 'Agricultural Technology and Mechanical Systems Program of Study', groups: [['cte_agri1'], ['cte_agrmech'], ['cte_agrpower', 'cte_agrfab'], ['cte_agprac']] },
+      { name: 'Floral Design Program of Study', groups: [['cte_floral1'], ['cte_floral2'], ['cte_floralprac']] },
+      { name: 'Veterinary Medicine/Animal Science Program of Study', groups: [['cte_agri1'], ['cte_livestock', 'cte_smallanim', 'cte_equine'], ['cte_vetsci', 'sci_advanim'], ['cte_vetprac']] },
+      { name: 'Architecture Drafting and Design Program of Study', groups: [['cte_arch1'], ['cte_arch2'], ['cte_arch3'], ['cte_archprac']] },
+      { name: 'Animation Program of Study', groups: [['cte_aavtc1'], ['cte_anim1'], ['cte_anim2'], ['cte_animp']] },
+      { name: 'Audio Video Production Program of Study', groups: [['cte_aavtc1'], ['cte_avp1'], ['cte_avp2'], ['cte_avpp']] },
+      { name: 'Fashion Design Program of Study', groups: [['cte_fashion1'], ['cte_fashion2'], ['cte_fashionp'], ['cte_fashionp2']] },
+      { name: 'Graphic Design and Illustration Program of Study', groups: [['cte_aavtc1'], ['cte_gdi1'], ['cte_gdi2'], ['cte_gdip']] },
+      { name: 'Commercial Photography Program of Study', groups: [['cte_aavtc1'], ['cte_photo1'], ['cte_photo2'], ['cte_photop']] },
+      { name: 'Video Game Design Program of Study', groups: [['cte_aavtc1'], ['cte_vgd1'], ['cte_vgd2'], ['cte_vgd3']] },
+      { name: 'Accounting and Financial Services Program of Study', groups: [['cte_bus1'], ['cte_acct1', 'cte_money'], ['m_acct2'], ['cte_practbus']] },
+      { name: 'Business Management Program of Study', groups: [['cte_bus1'], ['cte_busmgmt'], ['cte_practbus']] },
+      { name: 'Entrepreneurship Program of Study', groups: [['cte_bus1'], ['cte_entrep'], ['cte_practbus']] },
+      { name: 'Marketing and Sales Program of Study', groups: [['cte_bus1'], ['cte_sports_mkt', 'cte_social_mkt'], ['cte_practbus']] },
+      { name: 'Real Estate Program of Study', groups: [['cte_bus1'], ['cte_realty']] },
+      { name: 'Engineering Foundations Program of Study', groups: [['cte_eng1', 'cte_robo1'], ['m_robo2', 'cte_engdes'], ['cte_engdes2', 'cte_progeng'], ['cte_engprac']] },
+      { name: 'Drone (Unmanned Vehicle) Program of Study', groups: [['sci_uav1'], ['cte_uav2']] },
+      { name: 'Culinary Arts Program of Study', groups: [['cte_cul0'], ['cte_cul1'], ['cte_cul2'], ['cte_culprac']] },
+      { name: 'Cybersecurity Program of Study', groups: [['cte_cyber1'], ['cte_cyber2'], ['cte_cybercap']] },
+      { name: 'Programming and Software Development Program of Study', groups: [['lot_cs1h'], ['lot_csp'], ['lot_csa'], ['lot_cs3']] },
+      { name: 'Robotics and Automation Technology Program of Study', groups: [['cte_mfg1', 'cte_robo1'], ['cte_mfgtech1', 'm_robo2'], ['m_mfg2'], ['cte_mfgprac']] },
+      { name: 'Teaching and Training Program of Study', groups: [['cte_edu1'], ['cte_edu2'], ['cte_edu3'], ['cte_eduprac']] },
+      { name: 'Dental Program of Study', groups: [['cte_medterm'], ['cte_hsci'], ['cte_dental1'], ['cte_dental2']] },
+      { name: 'Emergency Medical Technician (EMT) Program of Study', groups: [['cte_medterm'], ['cte_hsci'], ['cte_emtprep'], ['cte_emt']] },
+      { name: 'Pharmacy Technician Program of Study', groups: [['cte_medterm'], ['cte_hsci'], ['cte_pharm'], ['cte_pharmprac']] },
+      { name: 'Medical/Internship Program of Study', groups: [['cte_medterm'], ['cte_hsci'], ['cte_medclin'], ['cte_medintern']] },
+      { name: 'Law Enforcement Program of Study', groups: [['cte_law1'], ['cte_lawenf1'], ['cte_lawenf2'], ['cte_crimeinv', 'cte_lawprac']] },
+      { name: 'Legal Studies Program of Study', groups: [['cte_law1'], ['cte_legalres'], ['cte_court'], ['cte_lawprac']] },
+      { name: 'Marine Corps JROTC', groups: [['pe_jrotc'], ['cte_jrotc2'], ['cte_jrotc3'], ['cte_jrotc4']] }
+    ];
+    const MATH_PATH_COURSE_IDS = [
+      'm_geo', 'm_geoh', ...ALGEBRA_II_COURSES, 'm_precalc', 'm_precalch', 'm_precalcor',
+      'm_extalg', 'm_finmath', 'm_statsbus', 'm_calcab', 'm_calcbc', 'm_stats',
+      'm_statsor', 'm_ibapp', 'm_ibana', 'm_calg', 'm_estats', 'm_calc3', 'm_diffeq'
+    ];
+    const MATH_START_COURSE_IDS = [
+      'm_alg1', ...GEOMETRY_COURSES, ...ALGEBRA_II_COURSES,
+      ...PRECALC_COURSES, ...CALCL_COURSES
+    ];
+    const LEVEL_2_CTE_COURSES = [
+      'cte_agrmech', 'cte_agrpower', 'cte_agrfab', 'cte_floral1', 'cte_floral2',
+      'cte_equine', 'cte_smallanim', 'cte_livestock', 'cte_vetsci',
+      'cte_arch2', 'cte_arch3', 'cte_archprac',
+      'cte_anim1', 'cte_anim2', 'cte_animp', 'cte_avp1', 'cte_avp2', 'cte_avpp',
+      'cte_fashion1', 'cte_fashion2', 'cte_fashionp', 'cte_gdi1', 'cte_gdi2', 'cte_gdip',
+      'cte_photo1', 'cte_photo2', 'cte_photop', 'cte_vgd1', 'cte_vgd2', 'cte_vgd3',
+      'cte_acct1', 'cte_entrep', 'cte_busmgmt', 'cte_vbiz', 'cte_hr',
+      'cte_sports_mkt', 'cte_social_mkt', 'cte_realty', 'cte_practbus',
+      'cte_robo1', 'cte_engdes', 'cte_engdes2', 'cte_progeng', 'cte_engprac', 'cte_uav2',
+      'cte_cyber2', 'cte_cybercap', 'cte_mfgtech1', 'm_mfg2', 'cte_mfgprac',
+      'cte_edu2', 'cte_edu3', 'cte_eduprac', 'cte_edu_capstone',
+      'cte_hsci', 'cte_dental1', 'cte_dental2', 'cte_emtprep', 'cte_emt',
+      'cte_pharm', 'cte_pharmprac', 'cte_medclin', 'cte_medintern',
+      'cte_lawenf1', 'cte_lawenf2', 'cte_legalres', 'cte_court', 'cte_crimeinv', 'cte_lawprac',
+      'cte_cul1', 'cte_cul2', 'cte_culprac'
+    ];
+    const ADVANCED_ENGINEERING_COURSES = ['cte_engdes', 'cte_engdes2', 'cte_progeng', 'cte_uav2'];
+    const COURSE_LEVEL_IDS = (id, levels = [1, 2, 3, 4]) =>
+      levels.map((level, index) => index === 0 ? id : `${id}_${level}`);
+    const BAND_COURSES = [
+      ...COURSE_LEVEL_IDS('fa_band_nv'), ...COURSE_LEVEL_IDS('fa_band_v'),
+      ...COURSE_LEVEL_IDS('fa_band_sub_a'), ...COURSE_LEVEL_IDS('fa_band_sub_b')
+    ];
+    const ORCHESTRA_COURSES = [
+      ...COURSE_LEVEL_IDS('fa_orch_nv'), ...COURSE_LEVEL_IDS('fa_orch_v'),
+      ...COURSE_LEVEL_IDS('fa_orch_sub_a'), ...COURSE_LEVEL_IDS('fa_orch_sub_b'),
+      ...COURSE_LEVEL_IDS('fa_orch_sub_c')
+    ];
+    const CHOIR_COURSES = [
+      ...COURSE_LEVEL_IDS('fa_choir_nv'), ...COURSE_LEVEL_IDS('fa_choir_v'),
+      ...COURSE_LEVEL_IDS('fa_choir_sub_tenor'), ...COURSE_LEVEL_IDS('fa_choir_sub_treble'),
+      ...COURSE_LEVEL_IDS('fa_choir_treble'), ...COURSE_LEVEL_IDS('fa_choir_mixed'),
+      ...COURSE_LEVEL_IDS('fa_choir_ac'), ...COURSE_LEVEL_IDS('fa_choir_ac_treble'),
+      ...COURSE_LEVEL_IDS('fa_choir_ac_mixed'), ...COURSE_LEVEL_IDS('fa_choir_ac_tb')
+    ];
+    const MUSIC_ENSEMBLES = [
+      ...BAND_COURSES, ...ORCHESTRA_COURSES, ...CHOIR_COURSES,
+      ...COURSE_LEVEL_IDS('fa_piano2', [2, 3, 4]).slice(1)
+    ];
+    const ADVANCED_MUSIC_ENSEMBLES = [
+      ...BAND_COURSES.filter(id => /_(3|4)$/.test(id)),
+      ...ORCHESTRA_COURSES.filter(id => /_(3|4)$/.test(id)),
+      ...CHOIR_COURSES.filter(id => /_(3|4)$/.test(id)),
+      ...COURSE_LEVEL_IDS('fa_piano2', [2, 3, 4]).slice(1)
+    ];
 
     /** Courses that must be completed before a later course can be taken.
      * Supported patterns:
@@ -598,29 +837,289 @@
      *  - nested combinations are supported, e.g. { allOf: ['a', { anyOf: ['b','c'] }] }
      */
     const COURSE_PREREQS = {
-      e2: ['e1', 'e1h', 'e1sg', 'e1esol'],
-      e2h: ['e1', 'e1h', 'e1sg', 'e1esol'],
-      e3: ['e2', 'e2h', 'e2sg', 'e1esol'],
-      e3ap: ['e2', 'e2h', 'e2sg', 'e1esol'],
-      e4: ['e3', 'e3ap', 'e1esol'],
-      e4ap: ['e3', 'e3ap', 'e1esol'],
-      eiblit: ['e3', 'e3ap', 'e1esol'],
-      e1302: ['e1301'],
+
+      // ══════════════════════════════════════════════════════════════
+      // ENGLISH
+      // ══════════════════════════════════════════════════════════════
+      e2: { anyOf: ['e1', 'e1h', 'e1sg', 'e1esol'] },
+      e2h: { anyOf: ['e1', 'e1h', 'e1sg', 'e1esol'] },
+      e2sg: ['e1sg'],
+      e3: { anyOf: ['e2', 'e2h', 'e2sg'] },
+      e3ap: { anyOf: ['e2', 'e2h', 'e2sg'] },
+      e4: { anyOf: ['e3', 'e3ap'] },
+      e4ap: ['e3ap'],
+      eiblit: { anyOf: ['e2', 'e2h', 'e2sg'] },
+      eiblit2: ['eiblit'],
+      eibll: { anyOf: ['e2', 'e2h', 'e2sg'] },
+      eibll2: ['eibll'],
+      e1301: { anyOf: ['e2', 'e2h', 'e2sg'] },
+      e1302: { allOf: [{ anyOf: ['e2', 'e2h', 'e2sg'] }, 'e1301'] },
       e2332: ['e1301', 'e1302'],
       e2333: ['e2332'],
-      eap_sem: ['e1', 'e1h', 'e1sg', 'e1esol'],
+      eap_sem: { anyOf: ['e1', 'e1h', 'e1sg', 'e1esol'] },
       eap_res: ['eap_sem'],
-      m_calcab: ['m_precalc'],
+
+      // ══════════════════════════════════════════════════════════════
+      // MATH
+      // ══════════════════════════════════════════════════════════════
+      m_geo: ['m_alg1'],
+      m_geoh: ['m_alg1'],
+      m_algr: ['m_alg1'],
+      m_alg2: { allOf: ['m_alg1', { anyOf: GEOMETRY_COURSES }] },
+      m_alg2h: { allOf: ['m_alg1', { anyOf: GEOMETRY_COURSES }] },
+      m_alg2or: { allOf: ['m_alg1', { anyOf: GEOMETRY_COURSES }] },
+      m_ibapp: { anyOf: ALGEBRA_II_COURSES },
+      m_ibana: { anyOf: ['m_precalch', 'm_precalcor'] },
+      m_extalg: { anyOf: ALGEBRA_II_COURSES },
+      m_precalc: { allOf: [{ anyOf: ALGEBRA_II_COURSES }, { anyOf: GEOMETRY_COURSES }] },
+      m_precalch: { allOf: [{ anyOf: ALGEBRA_II_COURSES }, { anyOf: GEOMETRY_COURSES }] },
+      m_precalcor: { allOf: [{ anyOf: ['m_alg2h', 'm_alg2or'] }, { anyOf: ['m_geoh'] }] },
+      m_calcab: { anyOf: PRECALC_COURSES },
       m_calcbc: { anyOf: ['m_precalch', 'm_precalcor'] },
-      m_precalc: { allOf: ['m_alg2', 'm_geo'] },
-      m_stats: ['m_alg2'],
-      m_robo2: ['cte_robo1']
+      m_stats: { anyOf: ['m_alg2h', 'm_alg2or'] },
+      m_statsor: { allOf: ['m_alg1', { anyOf: GEOMETRY_COURSES }, { anyOf: ALGEBRA_II_COURSES }] },
+      m_calc3: ['m_calcbc'],
+      m_diffeq: ['m_calcbc'],
+      // ══════════════════════════════════════════════════════════════
+      //  alt MATH
+      // ══════════════════════════════════════════════════════════════
+      m_finmath: ['m_alg1'],
+      m_statsbus: { anyOf: ALGEBRA_II_COURSES },
+      m_acct2: ['cte_acct1'],
+      m_robo2: ['cte_robo1'],
+      m_mfg2: { allOf: [{ anyOf: ALGEBRA_II_COURSES }, 'cte_mfgtech1'] },
+      lot_csa: ['m_alg1'],
+      lot_cs3: ['lot_csa'],
+
+      // ══════════════════════════════════════════════════════════════
+      // SCIENCE
+      // ══════════════════════════════════════════════════════════════
+      sci_apenv: { anyOf: ['sci_bioh', 'sci_biosg', 'sci_chemh'] },
+      sci_orgeo: { allOf: [{ anyOf: BIOLOGY_COURSES }, { anyOf: CHEMISTRY_COURSES }] },
+      sci_ibbio: { anyOf: BIOLOGY_COURSES },
+      sci_ibphys: { anyOf: ['m_alg2h', 'm_alg2or'] },
+      sci_ibenv: { anyOf: BIOLOGY_COURSES },
+      sci_applphys: { allOf: [{ anyOf: SCIENCE_CREDIT_COURSES.filter(id => id !== 'sci_applphys') }, 'm_alg1'] },
+      sci_advanim: {
+        allOf: [
+          { anyOf: BIOLOGY_COURSES },
+          { anyOf: [...CHEMISTRY_COURSES, 'sci_ipc'] },
+          'm_alg1',
+          { anyOf: GEOMETRY_COURSES },
+          { anyOf: [{ allOf: ['cte_smallanim', 'cte_equine'] }, 'cte_livestock'] }
+        ]
+      },
+      sci_anat: { allOf: [{ anyOf: BIOLOGY_COURSES }, { anyOf: [...CHEMISTRY_COURSES, 'sci_ipc', ...PHYSICS_OR_APPLIED_PHYSICS_COURSES] }] },
+      sci_foren: { allOf: [{ anyOf: BIOLOGY_COURSES }, { anyOf: [...CHEMISTRY_COURSES, 'sci_ipc', ...PHYSICS_OR_APPLIED_PHYSICS_COURSES] }] },
+      sci_food: {
+        allOf: [
+          { anyOf: BIOLOGY_COURSES },
+          { anyOf: CHEMISTRY_COURSES },
+          { anyOf: ['cte_cul1', 'cte_cul2', 'cte_equine', 'cte_smallanim', 'cte_livestock', 'cte_floral1', 'fa_floralart', 'cte_agrmech'] }
+        ]
+      },
+      sci_apbio: { allOf: [{ anyOf: ['sci_bioh', 'sci_biosg'] }, 'sci_chemh'] },
+      sci_apphys1: { allOf: ['sci_chemh', { anyOf: ['m_alg2h', 'm_alg2or'] }, 'm_geoh'] },
+      sci_apchem: { allOf: ['sci_chemh', { anyOf: ['m_alg2h', 'm_alg2or'] }] },
+      sci_apphys2: { allOf: ['sci_apphys1', { anyOf: PRECALC_COURSES }] },
+      sci_appmc: { anyOf: [...CALCL_COURSES, 'sci_apphys1'] },
+      sci_appe: { anyOf: [...CALCL_COURSES, 'sci_apphys1'] },
+
+      // ══════════════════════════════════════════════════════════════
+      // SOCIAL STUDIES
+      // ══════════════════════════════════════════════════════════════
+      ss_apgov: ['ss_apus'],
+      ss_apmacro: ['ss_apus'],
+      ss_apeu: { anyOf: ADVANCED_SOCIAL_STUDIES_COURSES.filter(id => id !== 'ss_apeu') },
+      ss_sttop: { anyOf: ADVANCED_SOCIAL_STUDIES_COURSES },
+      ss_appsych: ['ss_sttop'],
+      ss_pfle: { anyOf: ['ss_us', 'ss_apus', 'ss_hist1', 'ss_hist2'] },
+
+      // ══════════════════════════════════════════════════════════════
+      // LANGUAGES OTHER THAN ENGLISH
+      // ══════════════════════════════════════════════════════════════
+      lot_sp2: { anyOf: ['lot_sp1', 'lot_sp1ns'] },
+      lot_sp2h: { anyOf: ['lot_sp1', 'lot_sp1ns'] },
+      lot_sp2ns: { anyOf: ['lot_sp1', 'lot_sp1ns'] },
+      lot_sp3: { anyOf: ['lot_sp2', 'lot_sp2h', 'lot_sp2ns'] },
+      lot_sp4: ['lot_sp3'],
+      lot_sp5: ['lot_sp4'],
+      lot_ibsp1: ['lot_sp3'],
+      lot_ibsp2: { allOf: ['lot_sp3', 'lot_ibsp1'] },
+      lot_fr2: ['lot_fr1'],
+      lot_fr2h: ['lot_fr1'],
+      lot_fr3: { anyOf: ['lot_fr2', 'lot_fr2h'] },
+      lot_fr4: ['lot_fr3'],
+      lot_ibfr1: ['lot_fr3'],
+      lot_ibfr2: { allOf: ['lot_fr3', 'lot_ibfr1'] },
+      lot_asl2: ['lot_asl1'],
+      lot_asl3: ['lot_asl2'],
+      lot_asl4: ['lot_asl3'],
+
+      // ══════════════════════════════════════════════════════════════
+      // CAREER & TECHNICAL EDUCATION
+      // ══════════════════════════════════════════════════════════════
+      cte_agrpower: { allOf: ['cte_agrmech', 'cte_agri1'] },
+      cte_agrfab: ['cte_agrmech'],
+      cte_agprac: ['cte_agrpower'],
+      cte_floral2: ['cte_floral1'],
+      cte_floralprac: ['cte_floral2'],
+      cte_vetsci: {
+        anyOf: [
+          'cte_livestock',
+          { allOf: ['cte_smallanim', 'cte_equine'] }
+        ]
+      },
+      cte_vetprac: { allOf: ['sci_advanim', 'cte_vetsci'] },
+      cte_arch2: {
+        allOf: [
+          'm_alg1',
+          { anyOf: ['e1', 'e1h', 'e1sg', 'e1esol'] },
+          { anyOf: GEOMETRY_COURSES },
+          'cte_arch1'
+        ]
+      },
+      cte_arch3: ['cte_arch2'],
+      cte_archprac: ['cte_arch3'],
+      cte_anim2: ['cte_anim1'],
+      cte_animp: ['cte_anim2'],
+      cte_avp2: ['cte_avp1'],
+      cte_avpp: ['cte_avp2'],
+      cte_fashion2: ['cte_fashion1'],
+      cte_fashionp: ['cte_fashion2'],
+      cte_gdi2: ['cte_gdi1'],
+      cte_gdip: ['cte_gdi2'],
+      cte_photo2: ['cte_photo1'],
+      cte_photop: ['cte_photo2'],
+      cte_vgd2: ['cte_vgd1'],
+      cte_vgd3: ['cte_vgd2'],
+      cte_entrep: ['cte_bus1'],
+      cte_bustech2: ['cte_bustech1'],
+      cte_busmgmt: { anyOf: ['cte_bus1', 'cte_bustech1'] },
+      cte_practbus: {
+        anyOf: [
+          'cte_acct1',
+          'cte_busmgmt',
+          { allOf: ['cte_vbiz', 'cte_hr'] },
+          { allOf: ['cte_sports_mkt', 'cte_social_mkt'] },
+          'cte_entrep'
+        ]
+      },
+      cte_engdes: { allOf: ['m_alg1', { anyOf: ['cte_robo1', 'cte_eng1'] }] },
+      cte_engdes2: { allOf: ['m_alg1', 'cte_engdes'] },
+      cte_progeng: { allOf: ['m_alg1', { anyOf: ['sci_applphys', 'cte_eng1'] }] },
+      cte_engprac: { allOf: ['m_alg1', { anyOf: GEOMETRY_COURSES }] },
+      cte_uav2: { allOf: ['m_alg1', { anyOf: GEOMETRY_COURSES }, 'sci_uav1'] },
+      sci_uav1: { allOf: ['m_alg1', { anyOf: BIOLOGY_COURSES }, { anyOf: [...CHEMISTRY_COURSES, 'sci_ipc', ...PHYSICS_OR_APPLIED_PHYSICS_COURSES] }] },
+      cte_cul1: ['cte_cul0'],
+      cte_cul2: ['cte_cul1'],
+      cte_culprac: ['cte_cul2'],
+
+      // ══════════════════════════════════════════════════════════════
+      // ADDITIONAL CTE
+      // ══════════════════════════════════════════════════════════════
+      cte_cyber2: ['cte_cyber1'],
+      cte_cybercap: ['cte_cyber1', 'cte_cyber2'],
+      cte_mfgtech1: { anyOf: ['cte_mfg1', 'cte_engdes'] },
+      cte_edu3: { anyOf: ['cte_edu1', 'cte_edu2'] },
+      cte_eduprac: ['cte_edu3'],
+      cte_livestock: { anyOf: AGRICULTURE_COURSES.filter(id => id !== 'cte_livestock') },
+      cte_hsci: { allOf: ['cte_medterm', { anyOf: BIOLOGY_COURSES }] },
+      cte_dental1: ['cte_hsci'],
+      cte_dental2: ['cte_dental1'],
+      cte_emt: ['cte_emtprep'],
+      cte_emtprep: ['cte_hsci'],
+      cte_pharm: { anyOf: BIOLOGY_COURSES },
+      cte_pharmprac: ['cte_hsci', 'cte_pharm'],
+      cte_medclin: ['cte_hsci'],
+      cte_medintern: ['cte_medclin'],
+      cte_lawenf2: ['cte_lawenf1'],
+      cte_crimeinv: ['cte_lawenf2'],
+      cte_lawprac: { anyOf: ['cte_law1', 'cte_lawenf1', 'cte_lawenf2', 'cte_legalres', 'cte_court', 'cte_crimeinv'] },
+      cte_legalres: { anyOf: ['cte_law1', 'cte_lawenf1', 'cte_lawenf2', 'cte_crimeinv'] },
+      cte_court: ['cte_legalres'],
+      cte_jrotc2: ['pe_jrotc'],
+      cte_jrotc3: ['cte_jrotc2'],
+      cte_jrotc4: ['cte_jrotc3'],
+
+      // ══════════════════════════════════════════════════════════════
+      // FINE ARTS
+      // ══════════════════════════════════════════════════════════════
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_theat2', [2,3,4]).map(id => [id, ['fa_theat1']])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_mustheat2', [2,3,4]).map(id => [id, ['fa_mustheat1']])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_theatjv', [2,3,4]).map(id => [id, { anyOf: ['fa_theat1', 'fa_theat9'] }])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_theatv').map(id => [id, { anyOf: ['fa_theat1', 'fa_theat9'] }])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_techtheat2', [2,3,4]).map(id => [id, ['fa_techtheat1']])),
+      fa_pac: ['fa_techtheat1'],
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_dance2', [2,3,4]).map(id => [id, ['fa_dance1']])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_danceimp', [1,2,3]).map(id => [
+        id,
+        { anyOf: [...COURSE_LEVEL_IDS('fa_danceperf'), 'fa_dance1', ...COURSE_LEVEL_IDS('fa_dance2', [2,3,4])] }
+      ])),
+      fa_floralart: ['cte_floral1'],
+
+      // ══════════════════════════════════════════════════════════════
+      // PHYSICAL EDUCATION AND OTHER ELECTIVES
+      // ══════════════════════════════════════════════════════════════
+      ...Object.fromEntries(COURSE_LEVEL_IDS('pe_weight', [1,2,3]).map(id => [id, { allOf: ['fa_skillact', 'fa_fitness'] }])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('pe_at').map(id => [id, ['pe_sportsmed']])),
+      cte_cp2: ['cte_cp1'],
+      cte_fashionp2: ['cte_fashionp'],
     };
 
     /** Courses that must be scheduled in the same grade level together. */
     const COURSE_COREQS = {
+      e1301: ['e1302'],
+      e1302: ['e1301'],
+      e2332: ['e2333'],
+      e2333: ['e2332'],
+      sci_appmc: ['sci_appe'],
+      sci_appe: ['sci_appmc'],
+      m_calc3: ['m_diffeq'],
+      m_diffeq: ['m_calc3'],
+      ss_gov: ['ss_econ'],
+      ss_econ: ['ss_gov'],
+      ss_apgov: ['ss_apmacro'],
+      ss_apmacro: ['ss_apgov'],
+      ss_hist1: ['ss_hist2'],
+      ss_hist2: ['ss_hist1'],
+      ss_govt_dc: ['ss_econ_dc'],
+      ss_econ_dc: ['ss_govt_dc'],
       cte_equine: ['cte_smallanim'],
-      cte_smallanim: ['cte_equine']
+      cte_smallanim: ['cte_equine'],
+      cte_vbiz: ['cte_hr'],
+      cte_hr: ['cte_vbiz'],
+      cte_sports_mkt: ['cte_social_mkt'],
+      cte_social_mkt: ['cte_sports_mkt'],
+      ss_sttop: ['ss_appsych'],
+      ss_appsych: ['ss_sttop']
+    };
+
+    const COURSE_CONCURRENT = {
+      lot_cs1h: { anyOf: ['m_alg1'] },
+      lot_csp: { anyOf: ['m_alg1'] },
+      cte_eng1: { anyOf: ['m_alg1'] },
+      cte_arch2: { anyOf: GEOMETRY_COURSES },
+      cte_vgd1: { anyOf: ['cte_aavtc1', 'fa_digianim'] },
+      cte_pharm: { allOf: [{ anyOf: ['sci_chem', 'sci_chemh'] }, { anyOf: ['cte_hsci'] }] },
+      cte_engdes2: { anyOf: GEOMETRY_COURSES },
+      cte_edu_capstone: { anyOf: ['cte_edu3', 'cte_eduprac'] },
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_ipe').map(id => [id, { anyOf: [...BAND_COURSES, ...ORCHESTRA_COURSES] }])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_jazz').map(id => [id, { anyOf: BAND_COURSES }])),
+      fa_ibmus: { anyOf: ADVANCED_MUSIC_ENSEMBLES },
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_choir_ac').map(id => [id, { anyOf: CHOIR_COURSES.filter(choirId => !choirId.startsWith('fa_choir_ac')) }])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_choir_ac_treble').map(id => [id, { anyOf: CHOIR_COURSES.filter(choirId => !choirId.startsWith('fa_choir_ac')) }])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_choir_ac_mixed').map(id => [id, { anyOf: CHOIR_COURSES.filter(choirId => !choirId.startsWith('fa_choir_ac')) }])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('fa_choir_ac_tb').map(id => [id, { anyOf: CHOIR_COURSES.filter(choirId => !choirId.startsWith('fa_choir_ac')) }])),
+      ...Object.fromEntries(COURSE_LEVEL_IDS('pe_at').map(id => [id, { anyOf: ['pe_sportsmed'] }])),
+    };
+
+    const COURSE_CONCURRENT_OR_PRIOR = {
+      lot_cs1h: { anyOf: ['m_alg1'] },
+      lot_csp: { anyOf: ['m_alg1'] },
+      cte_eng1: { anyOf: ['m_alg1'] },
+      cte_arch2: { anyOf: GEOMETRY_COURSES },
+      cte_engdes2: { anyOf: GEOMETRY_COURSES }
     };
 
 
@@ -635,6 +1134,18 @@
     //   credits – credit value (can be fractional, e.g. 0.5)
     //   ibc     – (optional) number of Industry-Based Certifications
     // ─────────────────────────────────────────────────────────────────
+
+    function courseSeries(id, name, cat, grades, credits, note, levels = [1, 2, 3, 4]) {
+      const roman = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+      return levels.map((level, index) => ({
+        id: index === 0 ? id : `${id}_${level}`,
+        name: `${name} ${roman[level]}`,
+        cat,
+        grades: [...grades],
+        credits,
+        ...(note ? { note } : {})
+      }));
+    }
 
     const COURSES = [
 
@@ -652,20 +1163,22 @@
       { id: 'e3ap',        name: 'AP English III (Lang & Comp)',                 cat: ['english', 'college'], grades: [11],         credits: 1   },
       { id: 'e4',          name: 'English IV',                                   cat: 'english', grades: [12],         credits: 1   },
       { id: 'e4ap',        name: 'AP English IV (Lit & Comp)',                   cat: ['english', 'college'], grades: [12],         credits: 1   },
-      { id: 'eiblit',      name: 'IB English: Literature HL (Yr 1&2)',           cat: ['english', 'college'], grades: [11,12],      credits: 2   },
-      { id: 'eibll',       name: 'IB English: Lang & Literature HL (Yr 1&2)',    cat: ['english', 'college'], grades: [11,12],      credits: 2   },
+      { id: 'eiblit',      name: 'IB English: Literature HL Year 1',              cat: ['english', 'college'], grades: [11],         credits: 1   },
+      { id: 'eiblit2',     name: 'IB English: Literature HL Year 2',              cat: ['english', 'college'], grades: [12],         credits: 1   },
+      { id: 'eibll',       name: 'IB English: Lang & Literature HL Year 1',       cat: ['english', 'college'], grades: [11],         credits: 1   },
+      { id: 'eibll2',      name: 'IB English: Lang & Literature HL Year 2',       cat: ['english', 'college'], grades: [12],         credits: 1   },
       { id: 'e1301',       name: 'ENGL 1301 Composition I (Dual Credit)',        cat: ['english', 'college'], grades: [11,12],      credits: 0.5 },
       { id: 'e1302',       name: 'ENGL 1302 Composition II (Dual Credit)',       cat: ['english', 'college'], grades: [11,12],      credits: 0.5 },
       { id: 'e2332',       name: 'ENGL 2332 World Lit I (Dual Credit)',          cat: ['english', 'college'], grades: [12],         credits: 0.5 },
       { id: 'e2333',       name: 'ENGL 2333 World Lit II (Dual Credit)',         cat: ['english', 'college'], grades: [12],         credits: 0.5 },
-      { id: 'eap_sem',     name: 'AP Seminar',                                   cat: ['english', 'college'], grades: [10,11,12],   credits: 1   },
-      { id: 'eap_res',     name: 'AP Research',                                  cat: ['english', 'college'], grades: [11,12],      credits: 1   },
+      { id: 'eap_sem',     name: 'AP Seminar',                                   cat: ['elective', 'college'], grades: [10,11,12],   credits: 1   },
+      { id: 'eap_res',     name: 'AP Research',                                  cat: ['elective', 'college'], grades: [11,12],      credits: 1   },
       { id: 'ecreate',     name: 'Creative/Imaginative Writing',                 cat: 'english', grades: [10,11,12],   credits: 1   },
       { id: 'eresearch',   name: 'Research and Technical Writing',               cat: 'english', grades: [11,12],      credits: 1   },
       { id: 'epractwrite', name: 'Practical Writing Skills',                     cat: 'english', grades: [9,10,11],    credits: 1   },
-      { id: 'eread',       name: 'Reading I–III',                                cat: 'english', grades: [9,10,11,12], credits: 1   },
+      ...courseSeries('eread', 'Reading', 'english', [9,10,11,12], 1, null, [1,2,3]),
       { id: 'ecollread',   name: 'College Readiness and Study Skills',           cat: 'english', grades: [9,10,11,12], credits: 0.5 },
-      { id: 'ecpela',      name: 'College Prep: English Language Arts',          cat: 'english', grades: [12],         credits: 1   },
+      { id: 'ecpela',      name: 'College Prep: English Language Arts',          cat: 'elective', grades: [12],         credits: 1, note: 'Special education placement; not included in the standard English Language Arts graduation sequence.' },
 
       // ── Journalism / Speech ──────────────────────────────────────
       { id: 'j1',          name: 'Beginning Journalism',                         cat: 'elective', grades: [9,10,11,12],  credits: 0.5 },
@@ -674,8 +1187,8 @@
       { id: 'debate2',     name: 'Debate II',                                    cat: 'elective', grades: [10,11,12],    credits: 1   },
       { id: 'debate3',     name: 'Debate III',                                   cat: 'elective', grades: [11,12],       credits: 1   },
       { id: 'jprofcomm',   name: 'Professional Communications',                  cat: 'elective', grades: [9,10,11,12],  credits: 0.5 },
-      { id: 'jnews',       name: 'Adv Journalism: Newspaper Production I–III',   cat: 'elective', grades: [10,11,12],    credits: 1   },
-      { id: 'jyear',       name: 'Adv Journalism: Yearbook Production I–III',    cat: 'elective', grades: [10,11,12],    credits: 1   },
+      ...courseSeries('jnews', 'Advanced Journalism: Newspaper Production', 'elective', [10,11,12], 1, null, [1,2,3]),
+      ...courseSeries('jyear', 'Advanced Journalism: Yearbook Production', 'elective', [10,11,12], 1, null, [1,2,3]),
 
       // ══════════════════════════════════════════════════════════════
       // MATH
@@ -745,7 +1258,6 @@
       { id: 'sci_applphys', name: 'Applied Physics (physics credit)',                 cat: 'science', grades: [10,11,12], credits: 1 },
       { id: 'sci_uav1',     name: 'Unmanned Aerial Vehicles (UAV) I (science credit)', cat: 'science', grades: [10,11,12], credits: 1 },
       { id: 'sci_advanim',  name: 'Advanced Animal Science (science credit)',         cat: 'science', grades: [11,12],    credits: 1 },
-      { id: 'sci_aerospace',name: 'Aerospace I – Scientific Research & Design',      cat: 'science', grades: [11,12],    credits: 1 },
 
       // ══════════════════════════════════════════════════════════════
       // SOCIAL STUDIES
@@ -823,58 +1335,89 @@
       // ══════════════════════════════════════════════════════════════
       // FINE ARTS – Music
       // ══════════════════════════════════════════════════════════════
-      { id: 'fa_band_nv',   name: 'Band – Non-Varsity I–IV',                   cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_band_v',    name: 'Band – Varsity I–IV',                       cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_band_perc', name: 'Percussion Ensemble I–IV',                  cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_jazz',      name: 'Jazz Band I–IV',                            cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_ipe',       name: 'Instrumental Performance Ensemble I–IV',    cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_choir_nv',  name: 'Choir – Non-Varsity I–IV',                 cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_choir_v',   name: 'Choir – Varsity Mixed I–IV',               cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_choir_ac',  name: 'A Capella Choir I–IV',                     cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_orch_nv',   name: 'Orchestra – Non-Varsity I–IV',             cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_orch_v',    name: 'Orchestra – Varsity I–IV',                 cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_chamber',   name: 'Chamber Ensemble I–IV',                    cat: 'fine', grades: [10,11,12],   credits: 1 },
+      ...courseSeries('fa_band_nv', 'Band – Non-Varsity', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_band_v', 'Band – Varsity', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_band_sub_a', 'Sub Non-Varsity Band A', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_band_sub_b', 'Sub Non-Varsity Band B', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_band_perc', 'Percussion Ensemble', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_jazz', 'Jazz Band', 'fine', [9,10,11,12], 1, 'Audition required; must be concurrently enrolled in Band I–IV.'),
+      ...courseSeries('fa_ipe', 'Instrumental Performance Ensemble – Band', 'fine', [9,10,11,12], 1, 'Concurrent enrollment in band or orchestra with director approval.'),
+      ...courseSeries('fa_choir_nv', 'Choir – Non-Varsity', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_choir_v', 'Choir – Varsity Mixed', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_choir_ac', 'A Capella Choir', 'fine', [9,10,11,12], 1, 'Audition required; must be concurrently enrolled in Choir I–IV.'),
+      ...courseSeries('fa_choir_sub_tenor', 'Sub Non-Varsity Tenor-Bass Choir', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_choir_sub_treble', 'Sub Non-Varsity Treble Choir', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_choir_treble', 'Non-Varsity Treble Choir', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_choir_mixed', 'Non-Varsity Mixed Choir', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_choir_ac_treble', 'Treble A Capella Choir', 'fine', [10,11,12], 1, 'Audition required; concurrent enrollment in Choir I–IV.'),
+      ...courseSeries('fa_choir_ac_mixed', 'Mixed A Capella Choir', 'fine', [9,10,11,12], 1, 'Audition required; concurrent enrollment in Choir I–IV.'),
+      ...courseSeries('fa_choir_ac_tb', 'Tenor-Bass A Capella Choir', 'fine', [10,11,12], 1, 'Audition required; concurrent enrollment in Choir I–IV.'),
+      ...courseSeries('fa_orch_nv', 'Orchestra – Non-Varsity', 'fine', [10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_orch_v', 'Orchestra – Varsity', 'fine', [10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_orch_sub_a', 'Sub Non-Varsity Orchestra A', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_orch_sub_b', 'Sub Non-Varsity Orchestra B', 'fine', [10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_orch_sub_c', 'Sub Non-Varsity Orchestra C (D, etc.)', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      ...courseSeries('fa_chamber', 'Chamber Ensemble', 'fine', [10,11,12], 1, 'Audition required.', [2,3,4]),
       { id: 'fa_piano1',    name: 'Piano Performance I',                       cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_piano2',    name: 'Piano Performance II–IV',                   cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_ibmus',     name: 'IB Music SL (Yr 1&2)',                     cat: ['fine', 'college'], grades: [11,12],      credits: 2 },
-      { id: 'fa_apmus',     name: 'AP Music Theory',                           cat: ['fine', 'college'], grades: [10,11,12],   credits: 1 },
+      ...courseSeries('fa_piano2', 'Piano Performance', 'fine', [10,11,12], 1, 'Instructor approval required.', [2,3,4]),
+      { id: 'fa_ibmus',     name: 'IB Music SL (Yr 1&2)',                     cat: ['fine', 'college'], grades: [11,12],      credits: 2, note: 'Must concurrently take Choir III/IV, Band III/IV, Orchestra III/IV, or Piano III/IV and be an IB Diploma candidate or have an approved application.' },
+      { id: 'fa_apmus',     name: 'AP Music Theory',                           cat: ['fine', 'college'], grades: [11,12],   credits: 1, note: 'Must concurrently take Choir, Band, Orchestra, Piano III/IV, or have other approved musical experience.' },
 
       // ── Fine Arts – Visual Arts ──────────────────────────────────
       { id: 'fa_art1',      name: 'Art I',                                     cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_art2draw',  name: 'Art II–IV Drawing',                        cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_art2paint', name: 'Art II–IV Painting',                       cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_art2ceram', name: 'Art II–IV Ceramics',                       cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_art2sculpt',name: 'Art II–IV Sculpture (3-D)',                cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_art2print', name: 'Art II–IV Printmaking',                    cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_art3digi',  name: 'Art III–IV Digital Illustration',          cat: 'fine', grades: [11,12],      credits: 1 },
-      { id: 'fa_portart1',  name: 'Portfolio Art I Honors',                   cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_portart2',  name: 'Portfolio Art II Honors (2-D or 3-D)',     cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_portart3',  name: 'Portfolio Art III Honors (2-D or 3-D)',    cat: 'fine', grades: [11,12],      credits: 1 },
-      { id: 'fa_apdraw',    name: 'AP Studio Art Drawing',                    cat: ['fine', 'college'], grades: [11,12],      credits: 1 },
-      { id: 'fa_ap2d',      name: 'AP Studio Art 2-D Design',                 cat: ['fine', 'college'], grades: [11,12],      credits: 1 },
-      { id: 'fa_ap3d',      name: 'AP Studio Art 3-D Design',                 cat: ['fine', 'college'], grades: [11,12],      credits: 1 },
+      ...courseSeries('fa_art2draw', 'Art – Drawing', 'fine', [10,11,12], 1, 'Requires Art I or portfolio review.', [2,3,4]),
+      ...courseSeries('fa_art2paint', 'Art – Painting', 'fine', [10,11,12], 1, 'Requires Art I or portfolio review.', [2,3,4]),
+      ...courseSeries('fa_art2ceram', 'Art – Ceramics', 'fine', [10,11,12], 1, 'Requires Art I or portfolio review.', [2,3,4]),
+      ...courseSeries('fa_art2sculpt', 'Art – Sculpture (3-D)', 'fine', [10,11,12], 1, 'Requires Art I or portfolio review.', [2,3,4]),
+      ...courseSeries('fa_art2print', 'Art – Printmaking', 'fine', [10,11,12], 1, 'Requires Art I or portfolio review.', [2,3,4]),
+      ...courseSeries('fa_art3digi', 'Art – Digital Illustration', 'fine', [11,12], 1, 'Requires instructor approval and Art II or portfolio review.', [3,4]),
+      { id: 'fa_portart1',  name: 'Portfolio Art I Honors',                   cat: 'fine', grades: [9,10,11,12], credits: 1, note: 'Portfolio review required.' },
       { id: 'fa_arthistap', name: 'AP Art History',                            cat: ['fine', 'college'], grades: [10,11,12],   credits: 1 },
-      { id: 'fa_ibva',      name: 'IB Visual Arts SL/HL',                     cat: ['fine', 'college'], grades: [11,12],      credits: 1 },
-      { id: 'fa_ibfilm',    name: 'IB Film SL',                               cat: ['fine', 'college'], grades: [11,12],      credits: 1 },
+      { id: 'fa_ibva',      name: 'IB Visual Arts SL/HL',                     cat: ['fine', 'college'], grades: [11,12],      credits: 1, note: 'Requires Art I or teacher approval.' },
+      { id: 'fa_ibfilm',    name: 'IB Film SL',                               cat: ['fine', 'college'], grades: [11,12],      credits: 1, note: 'Must be enrolled in the IB Diploma Programme or have approved application.' },
+      { id: 'fa_portart2d', name: 'Portfolio Art II Honors – 2-D Design',     cat: 'fine', grades: [10,11,12], credits: 1, note: 'Portfolio review required.' },
+      { id: 'fa_portart2_3d',name:'Portfolio Art II Honors – 3-D Design',    cat: 'fine', grades: [10,11,12], credits: 1, note: 'Portfolio review required.' },
+      { id: 'fa_portart3d', name: 'Portfolio Art III Honors – 2-D Design',    cat: 'fine', grades: [11,12], credits: 1, note: 'Portfolio review required.' },
+      { id: 'fa_portart3_3d',name:'Portfolio Art III Honors – 3-D Design',   cat: 'fine', grades: [11,12], credits: 1, note: 'Portfolio review required.' },
+      { id: 'fa_apdraw',    name: 'AP Studio Art Drawing',                    cat: ['fine', 'college'], grades: [11,12],      credits: 1, note: 'Portfolio review required.' },
+      { id: 'fa_ap2d',      name: 'AP Studio Art 2-D Design',                 cat: ['fine', 'college'], grades: [11,12],      credits: 1, note: 'Portfolio review required.' },
+      { id: 'fa_ap3d',      name: 'AP Studio Art 3-D Design',                 cat: ['fine', 'college'], grades: [11,12],      credits: 1, note: 'Portfolio review required.' },
 
       // ── Fine Arts – Theatre ──────────────────────────────────────
       { id: 'fa_theat1',     name: 'Studio Theatre I',                        cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_theat2',     name: 'Studio Theatre II–IV',                    cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_mustheat1',  name: 'Musical Theatre I',                       cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_mustheat2',  name: 'Musical Theatre II–IV',                   cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_theat9',     name: '9th Grade Theatre Production I',          cat: 'fine', grades: [9],          credits: 1 },
-      { id: 'fa_theatjv',    name: 'JV Theatre Production II–IV',             cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_theatv',     name: 'Varsity Theatre Production I–IV',         cat: 'fine', grades: [10,11,12],   credits: 1 },
+      ...courseSeries('fa_theat2', 'Studio Theatre', 'fine', [10,11,12], 1, null, [2,3,4]),
+      { id: 'fa_mustheat1',  name: 'Musical Theatre I',                       cat: 'fine', grades: [9,10,11,12], credits: 1, note: 'Requires middle school Theatre or Studio Theatre I, plus audition/teacher approval.' },
+      ...courseSeries('fa_mustheat2', 'Musical Theatre', 'fine', [10,11,12], 1, 'Audition/teacher approval required.', [2,3,4]),
+      { id: 'fa_theat9',     name: '9th Grade Theatre Production I',          cat: 'fine', grades: [9],          credits: 1, note: 'Requires middle school Theatre and audition/teacher approval.' },
+      ...courseSeries('fa_theatjv', 'Junior Varsity Theatre Production', 'fine', [10,11,12], 1, 'Audition/teacher approval required.', [2,3,4]),
+      ...courseSeries('fa_theatv', 'Varsity Theatre Production', 'fine', [10,11,12], 1, 'Audition/teacher approval required.', [1,2,3,4]),
       { id: 'fa_techtheat1', name: 'Technical Theatre I',                     cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_techtheat2', name: 'Technical Theatre II–IV',                 cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_pac',        name: 'Performing Arts Center Management',       cat: 'fine', grades: [10,11,12],   credits: 1 },
+      ...courseSeries('fa_techtheat2', 'Technical Theatre', 'fine', [10,11,12], 1, 'Application/teacher approval required.', [2,3,4]),
+      { id: 'fa_pac',        name: 'Performing Arts Center Management',       cat: 'fine', grades: [10,11,12],   credits: 1, note: 'Application/teacher approval required.' },
 
       // ── Fine Arts – Dance ────────────────────────────────────────
       { id: 'fa_dance1',    name: 'Principles of Dance I',                    cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_dance2',    name: 'Principles of Dance II–IV',                cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_danceperf', name: 'Dance Performance Ensemble / Drill Team I–IV', cat: 'fine', grades: [9,10,11,12], credits: 1 },
-      { id: 'fa_danceimp',  name: 'Dance I–III Composition & Improvisation',  cat: 'fine', grades: [10,11,12],   credits: 1 },
-      { id: 'fa_danceflag', name: 'Dance Flag Performance I–IV',              cat: 'fine', grades: [9,10,11,12], credits: 1 },
+      ...courseSeries('fa_dance2', 'Principles of Dance', 'fine', [10,11,12], 1, 'Instructor approval required.', [2,3,4]),
+      ...courseSeries('fa_danceperf', 'Dance Performance Ensemble / Drill Team', 'fine', [9,10,11,12], 1, 'Audition required for Dance II–IV; JV/Varsity drill team tryouts may be required.'),
+      ...courseSeries('fa_danceimp', 'Dance Composition & Improvisation', 'fine', [10,11,12], 1, 'Audition required for JV/Varsity; Dance Performance Ensemble or Dance I–II and director placement required.', [1,2,3]),
+      ...courseSeries('fa_danceflag', 'Dance Flag Performance', 'fine', [9,10,11,12], 1, 'Audition required.'),
+      { id: 'fa_outdoor', name: 'Outdoor Recreation', cat: 'pe', grades: [9,10,11,12], credits: 1 },
+      ...courseSeries('pe_weight', 'Weight Training', 'pe', [10,11,12], 1, null, [1,2,3]),
+      { id: 'fa_fitness', name: 'Fitness and Wellness', cat: 'pe', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_skillact', name: 'Skill-Based Activities', cat: 'pe', grades: [9,10,11,12], credits: 1 },
+      { id: 'fa_offcampus', name: 'Off-Campus Physical Activity', cat: 'pe', grades: [9,10,11,12], credits: 1 },
+      { id: 'pe_sportsmed', name: 'Sports Medicine I', cat: 'pe', grades: [9,10,11,12], credits: 1 },
+      ...courseSeries('pe_at', 'Athletic Trainer', 'pe', [9,10,11,12], 1, 'Application required; completion or concurrent enrollment in Sports Medicine.'),
+      { id: 'pe_cheer', name: 'Cheerleading', cat: 'pe', grades: [9,10,11,12], credits: 1, note: 'Tryout required.' },
+      { id: 'pe_acaddec', name: 'Academic Decathlon', cat: 'elective', grades: [10,11,12], credits: 0.5, note: 'Catalog credit range: 0.5–1.' },
+      { id: 'pe_leadership', name: 'Student Leadership', cat: 'elective', grades: [9,10,11,12], credits: 1, note: 'Application required.' },
+      ...courseSeries('pe_pals', 'Peer Assistant Leadership (PALS)', 'elective', [11,12], 1, 'Application required.', [1,2]),
+      { id: 'pe_officeaide', name: 'Office Aide (local credit)', cat: 'elective', grades: [12], credits: 1, note: 'Requires approval, at least a C average, and no disciplinary action in the prior semester.' },
+      { id: 'pe_labmgmt', name: 'Laboratory Management (local credit)', cat: 'elective', grades: [12], credits: 1, note: 'Teacher approval required.' },
+      ...courseSeries('pe_hope', 'H.O.P.E. – Helping our Peers Excel', 'elective', [9,10,11,12], 1, '0.5 state and 0.5 local credit; application required.', [1,2]),
+      { id: 'pe_maps', name: 'Methods for Academic and Personal Success (MAPS) I', cat: 'elective', grades: [9,10], credits: 1 },
+      ...courseSeries('pe_connections', 'Making Connections', 'elective', [9,10,11,12], 0.5),
+      { id: 'ib_philosophy', name: 'IB Philosophy Standard Level', cat: ['elective', 'college'], grades: [11,12], credits: 1 },
 
       // CTE courses that also satisfy a Fine Arts credit
       { id: 'fa_floralart', name: 'Floral Design (Fine Arts credit)',          cat: 'fine', grades: [10,11,12], credits: 1 },
@@ -884,7 +1427,7 @@
       // PE / ATHLETICS
       // ══════════════════════════════════════════════════════════════
       { id: 'pe_pe',    name: 'Physical Education',             cat: 'pe', grades: [9,10,11,12], credits: 1   },
-      { id: 'pe_athl',  name: 'Athletics I–IV',                 cat: 'pe', grades: [9,10,11,12], credits: 1   },
+      ...courseSeries('pe_athl', 'Athletics', 'pe', [9,10,11,12], 1, 'Catalog credit range: 0.5–4.'),
       { id: 'pe_health',name: 'Health',                         cat: 'pe', grades: [9,10,11,12], credits: 0.5 },
       { id: 'pe_jrotc', name: 'JROTC Year I (also PE credit)',  cat: 'pe', grades: [9,10,11,12], credits: 1   },
 
@@ -924,6 +1467,7 @@
       { id: 'cte_fashion1',name: 'Fashion Design I',                               cat: 'elective', grades: [9],      credits: 1         },
       { id: 'cte_fashion2',name: 'Fashion Design II with Lab',                     cat: 'elective', grades: [10,11],  credits: 2         },
       { id: 'cte_fashionp',name: 'Practicum in Fashion Design I',                  cat: 'elective', grades: [11,12],  credits: 2         },
+      { id: 'cte_fashionp2',name: 'Practicum in Fashion Design II',                 cat: 'elective', grades: [12],     credits: 2         },
       { id: 'cte_gdi1',    name: 'Graphic Design & Illustration I',                cat: 'elective', grades: [10,11,12], credits: 1, ibc: 1},
       { id: 'cte_gdi2',    name: 'Graphic Design & Illustration II with Lab',      cat: 'elective', grades: [11,12],  credits: 2, ibc: 1 },
       { id: 'cte_gdip',    name: 'Practicum in Graphic Design & Illustration',     cat: 'elective', grades: [12],     credits: 2, ibc: 1 },
@@ -955,7 +1499,7 @@
       { id: 'cte_robo1',    name: 'Robotics I',                                              cat: 'elective', grades: [9,10,11],credits: 1         },
       { id: 'cte_engdes',   name: 'Engineering Design & Presentation',                       cat: 'elective', grades: [10,11],  credits: 1         },
       { id: 'cte_engdes2',  name: 'Advanced Engineering Design & Presentation (UT DE)',      cat: ['elective', 'college'], grades: [11,12],  credits: 2, ibc: 1 },
-      { id: 'cte_progeng',  name: 'Programming for Engineers',                               cat: 'elective', grades: [11,12],  credits: 1         },
+      { id: 'cte_progeng',  name: 'Programming for Engineers',                               cat: 'elective', grades: [11,12],  credits: 1, note: 'Requires Algebra I and either Applied Physics (may be taken concurrently) or Engineering Design Process.' },
       { id: 'cte_engprac',  name: 'Practicum in Engineering',                                cat: 'elective', grades: [12],     credits: 2, ibc: 1 },
       { id: 'cte_uav2',     name: 'UAV II / Drone Program',                                  cat: 'elective', grades: [11,12],  credits: 1, ibc: 1 },
 
@@ -967,7 +1511,7 @@
       // ── Manufacturing ────────────────────────────────────────────
       { id: 'cte_mfg1',     name: 'Principles of Manufacturing',                    cat: 'elective', grades: [9,10,11],  credits: 1         },
       { id: 'cte_mfgtech1', name: 'Manufacturing Engineering Technology I',         cat: 'elective', grades: [10,11,12], credits: 1, ibc: 1 },
-      { id: 'cte_mfgprac',  name: 'Practicum in Manufacturing',                     cat: 'elective', grades: [11,12],    credits: 2, ibc: 1 },
+      { id: 'cte_mfgprac',  name: 'Practicum in Manufacturing',                     cat: 'elective', grades: [12],       credits: 2, ibc: 1 },
 
       // ── Hospitality / Culinary Arts ──────────────────────────────
       { id: 'cte_cul0',   name: 'Introduction to Culinary Arts',  cat: 'elective', grades: [9,10],   credits: 1         },
@@ -980,6 +1524,7 @@
       { id: 'cte_edu2',    name: 'Technology for Teaching',            cat: 'elective', grades: [10,11,12],credits: 1         },
       { id: 'cte_edu3',    name: 'Instructional Practices',            cat: 'elective', grades: [11,12],   credits: 2         },
       { id: 'cte_eduprac', name: 'Practicum in Education & Training',  cat: 'elective', grades: [12],      credits: 2, ibc: 1 },
+      { id: 'cte_edu_capstone', name: 'Career and Technical Education Project-Based Capstone', cat: 'elective', grades: [12], credits: 1 },
 
       // ── Health Science ───────────────────────────────────────────
       { id: 'cte_medterm',   name: 'Medical Terminology',                                cat: 'elective', grades: [9],   credits: 1         },
@@ -1002,7 +1547,7 @@
       { id: 'cte_legalres', name: 'Legal Research',                                             cat: 'elective', grades: [10,11],  credits: 1, ibc: 1 },
       { id: 'cte_court',    name: 'Court Systems & Practices',                                  cat: 'elective', grades: [12],     credits: 1         },
       { id: 'cte_crimeinv', name: 'Criminal Investigation',                                     cat: 'elective', grades: [12],     credits: 1         },
-      { id: 'cte_lawprac',  name: 'Practicum in Law, Public Safety & Security',                cat: 'elective', grades: [12],     credits: 2         },
+      { id: 'cte_lawprac',  name: 'Practicum in Law, Public Safety & Security',                cat: 'elective', grades: [12],     credits: 2, note: 'Requires at least two Law courses, passing a background check, no disciplinary action that can be constituted as a criminal offense, and your own transportation.' },
 
       // ── JROTC (Years II–IV; Year I is under PE) ──────────────────
       { id: 'cte_jrotc2', name: 'JROTC Year II',  cat: 'elective', grades: [10,11,12], credits: 1 },
@@ -1057,9 +1602,24 @@
         if (savedSummer) summerCompleted = JSON.parse(savedSummer);
       } catch (e) { /* ignore corrupt data */ }
 
+      migrateLegacyIBEnglishPlan();
       renderSidebar();
       renderPlanner();
       updateCredits();
+    }
+
+    function migrateLegacyIBEnglishPlan() {
+      for (const [yearOneId, yearTwoId] of [['eiblit', 'eiblit2'], ['eibll', 'eibll2']]) {
+        if (plan[11]?.includes(yearOneId) || plan[12]?.includes(yearOneId)) {
+          plan[11] = plan[11] || [];
+          plan[12] = plan[12] || [];
+          plan[11] = [...new Set([...plan[11], yearOneId])];
+          plan[12] = [...new Set([...plan[12].filter(id => id !== yearOneId), yearTwoId])];
+        }
+        if (summerCompleted.includes(yearOneId) && !summerCompleted.includes(yearTwoId)) {
+          summerCompleted.push(yearTwoId);
+        }
+      }
     }
 
 
@@ -1135,9 +1695,27 @@
       return Array.isArray(course.cat) ? course.cat : [course.cat];
     }
 
+    function getScheduleLoad(courseIds) {
+      return courseIds.reduce((total, courseId) => {
+        const course = COURSES.find(item => item.id === courseId);
+        if (!course) return total;
+        return total + (courseId === 'lot_csa' ? 1 : course.credits);
+      }, 0);
+    }
+
+    function getScheduleLoadError(grade, courseIds) {
+      const load = getScheduleLoad(courseIds);
+      if (load <= MAX_ANNUAL_SCHEDULE_CREDITS) return '';
+      return `Grade ${grade} would have ${load} schedule credits, exceeding the ${MAX_ANNUAL_SCHEDULE_CREDITS}-credit annual limit.`;
+    }
+
     function getPrimaryCourseCat(course) {
       const cats = getCourseCats(course);
       return cats.length ? cats[0] : 'elective';
+    }
+
+    function getCourseLevelAlternatives(courseId) {
+      return COURSE_LEVEL_GROUPS.find(group => group.includes(courseId)) || [];
     }
 
     function courseMatchesCategory(course, cat) {
@@ -1230,6 +1808,132 @@
       return [...new Set(missing)];
     }
 
+    function hasCourseBeforeGrade(courseId, grade) {
+      return summerCompleted.includes(courseId) ||
+        GRADES.some(plannedGrade => plannedGrade < grade && plan[plannedGrade].includes(courseId));
+    }
+
+    function getPhysicsCPrereqError(courseId, grade) {
+      if (!PHYSICS_C_COURSES.includes(courseId)) return '';
+      if (CALCL_COURSES.some(calcId => hasCourseBeforeGrade(calcId, grade))) return '';
+
+      if (hasCourseBeforeGrade('sci_apphys1', grade)) {
+        return CALCL_COURSES.some(calcId => plan[grade].includes(calcId))
+          ? ''
+          : `With prior AP Physics I credit, add Calculus AB or BC to Grade ${grade}.`;
+      }
+
+      return `You need prior Calculus AB/BC credit, or prior AP Physics I credit and Calculus AB/BC in Grade ${grade}.`;
+    }
+
+    function getAdditionalPrereqError(courseId) {
+      const completed = getCompletedCourseIds();
+      const agriculturePracticums = ['cte_agprac', 'cte_floralprac', 'cte_vetprac'];
+      const manufacturingCourses = ['cte_mfg1', 'cte_mfgtech1', 'm_mfg2'];
+      const lawCourses = ['cte_law1', 'cte_lawenf1', 'cte_lawenf2', 'cte_legalres', 'cte_court', 'cte_crimeinv'];
+
+      if (agriculturePracticums.includes(courseId) &&
+          agriculturePracticums.some(id => id !== courseId && completed.has(id))) {
+        return 'The catalog allows only one Agriculture Practicum.';
+      }
+
+      if (courseId === 'cte_careerprep' && !LEVEL_2_CTE_COURSES.some(id => completed.has(id))) {
+        return 'You need at least one Level 2 or higher CTE course.';
+      }
+
+      if (courseId === 'cte_engprac') {
+        const completedEngineering = ENGINEERING_COURSES.filter(id => id !== courseId && completed.has(id));
+        const hasAdvancedEngineering = ADVANCED_ENGINEERING_COURSES.some(id => completed.has(id));
+        if (completedEngineering.length < 2 || !hasAdvancedEngineering) {
+          return 'You need two Engineering courses, including at least one Level 2 or higher course.';
+        }
+      }
+
+      if (courseId === 'cte_mfgprac' &&
+          manufacturingCourses.filter(id => completed.has(id)).length < 2) {
+        return 'You need to complete two Manufacturing courses.';
+      }
+
+      if (courseId === 'cte_lawprac' &&
+          lawCourses.filter(id => completed.has(id)).length < 2) {
+        return 'You need to complete at least two Law courses.';
+      }
+
+      return '';
+    }
+
+    function getConcurrentPrereqError(courseId, grade, scheduledIds = plan[grade]) {
+      if (courseId === 'e1301' || courseId === 'e1302') {
+        if (grade === 12) {
+          const priorEnglishThree = new Set([
+            ...summerCompleted,
+            ...GRADES.filter(plannedGrade => plannedGrade < grade).flatMap(plannedGrade => plan[plannedGrade])
+          ]);
+          if (!isPrereqSatisfied({ anyOf: ['e3', 'e3ap'] }, priorEnglishThree)) {
+            return 'Complete English III before taking ENGL 1301 and 1302 in Grade 12.';
+          }
+        } else if (grade !== 11) {
+          return 'ENGL 1301 and 1302 may be taken in Grade 11 or Grade 12.';
+        }
+      }
+      const rule = COURSE_CONCURRENT[courseId];
+      if (!rule) return '';
+      if ((courseId === 'pe_at' || /^pe_at_[234]$/.test(courseId)) &&
+          hasCourseBeforeGrade('pe_sportsmed', grade)) return '';
+      const priorRule = COURSE_CONCURRENT_OR_PRIOR[courseId];
+      const priorCourses = new Set([
+        ...summerCompleted,
+        ...GRADES.filter(plannedGrade => plannedGrade < grade).flatMap(plannedGrade => plan[plannedGrade])
+      ]);
+      if (priorRule && isPrereqSatisfied(priorRule, priorCourses)) return '';
+
+      const sameGradeCourses = new Set(scheduledIds.filter(id => id !== courseId));
+      if (isPrereqSatisfied(rule, sameGradeCourses)) return '';
+
+      if (priorRule) {
+        return `Complete before or concurrently with Grade ${grade}: ${formatPrerequisiteRule(rule, sameGradeCourses)}.`;
+      }
+      return `Schedule concurrently in Grade ${grade}: ${formatPrerequisiteRule(rule, sameGradeCourses)}.`;
+    }
+
+    function formatPrerequisiteRule(rule, completed, parentType = '') {
+      if (isPrereqSatisfied(rule, completed)) return '';
+      if (typeof rule === 'string') {
+        return COURSES.find(course => course.id === rule)?.name || rule;
+      }
+
+      if (Array.isArray(rule)) {
+        if (rule.every(item => typeof item === 'string')) {
+          return rule
+            .filter(id => !completed.has(id))
+            .map(id => COURSES.find(course => course.id === id)?.name || id)
+            .join(' and ');
+        }
+        const alternatives = rule.map(item => formatPrerequisiteRule(item, completed, 'anyOf')).filter(Boolean).join(' or ');
+        return parentType === 'allOf' ? `(${alternatives})` : alternatives;
+      }
+
+      if (rule && typeof rule === 'object') {
+        if (rule.anyOf) {
+          const alternatives = rule.anyOf.map(item => formatPrerequisiteRule(item, completed, 'anyOf')).filter(Boolean).join(' or ');
+          return parentType === 'allOf' ? `(${alternatives})` : alternatives;
+        }
+        if (rule.allOf) {
+          const requirements = rule.allOf.map(item => formatPrerequisiteRule(item, completed, 'allOf')).filter(Boolean).join(' and ');
+          return parentType === 'anyOf' ? `(${requirements})` : requirements;
+        }
+      }
+
+      return '';
+    }
+
+    function formatMissingPrereqGroups(courseId) {
+      const rule = COURSE_PREREQS[courseId] || [];
+      const completed = getCompletedCourseIds();
+      const missing = formatPrerequisiteRule(rule, completed);
+      return missing ? [missing] : [];
+    }
+
     function getMissingCoreqs(courseId, grade) {
       const coreqs = COURSE_COREQS[courseId] || [];
       if (!grade) return coreqs;
@@ -1293,23 +1997,34 @@
         const isPlaced = placed.has(course.id);
         const wasSummerCompleted = summerCompleted.includes(course.id);
         const missingReqs = getMissingPrereqs(course.id);
+        const additionalPrereqError = getAdditionalPrereqError(course.id);
         const missingCoreqs = getMissingCoreqs(course.id);
         const card     = document.createElement('div');
         const primaryCat = getPrimaryCourseCat(course);
         const categoryLabel = getCourseCategoryLabel(course);
 
-        const blockedClass = missingReqs.length ? ' blocked' : '';
+        const blockedClass = missingReqs.length || additionalPrereqError ? ' blocked' : '';
         const summerClass = wasSummerCompleted ? ' summer-complete' : '';
 
         card.className = `course-card cat-${primaryCat}${isPlaced ? ' placed' : ''}${blockedClass}${summerClass}`;
-        card.draggable = !isPlaced && !wasSummerCompleted && missingReqs.length === 0;
+        card.draggable = !isPlaced && !wasSummerCompleted && missingReqs.length === 0 && !additionalPrereqError;
         card.dataset.id = course.id;
 
         const prereqText = missingReqs.length
-          ? `<div class="prereq-note">Needs: ${missingReqs.map(id => {
-              const reqCourse = COURSES.find(c => c.id === id);
-              return reqCourse ? reqCourse.name : id;
-            }).join(', ')}</div>`
+          ? `<div class="prereq-note">Needs: ${formatMissingPrereqGroups(course.id).join('; ')}</div>`
+          : '';
+        const additionalPrereqText = additionalPrereqError
+          ? `<div class="prereq-note">Needs: ${additionalPrereqError.replace(/^You need /, '')}</div>`
+          : '';
+        const concurrentRule = COURSE_CONCURRENT[course.id];
+        const concurrentText = concurrentRule
+          ? `<div class="prereq-note">Concurrent requirement: ${formatPrerequisiteRule(concurrentRule, new Set())}.</div>`
+          : '';
+        const courseNoteText = course.note
+          ? `<div class="prereq-note">${course.note}</div>`
+          : '';
+        const physicsCPrereqText = PHYSICS_C_COURSES.includes(course.id)
+          ? '<div class="prereq-note">Catalog requirement: prior Calculus AB/BC credit, or prior AP Physics I credit plus Calculus AB/BC in the same grade.</div>'
           : '';
 
         const coreqText = missingCoreqs.length
@@ -1320,21 +2035,29 @@
           : '';
 
         const summerLabel = wasSummerCompleted
-          ? '<span class="grade-tag">Summer complete</span>'
+          ? '<span class="grade-tag">Summer complete</span><button class="btn btn-outline" type="button" onclick="toggleSummerComplete(\'' + course.id + '\')">Remove summer completion</button>'
           : '<button class="btn btn-outline" type="button" onclick="toggleSummerComplete(\'' + course.id + '\')">Mark as summer complete or completed in middle school or another high school</button>';
+        const blockLabel = isDoubleBlocked(course)
+          ? '<span class="grade-tag">Double-blocked</span>'
+          : '';
 
         card.innerHTML = `
           <div class="course-name">${course.name}</div>
           <div class="course-meta">
             <span class="tag">${categoryLabel}</span>
             <span class="grade-tag">Gr ${course.grades.join(', ')} · ${course.credits} cr</span>
+            ${blockLabel}
             ${isPlaced ? '<span class="grade-tag">✓ placed</span>' : ''}
           </div>
           ${summerLabel}
           ${prereqText}
+          ${additionalPrereqText}
+          ${concurrentText}
+          ${courseNoteText}
+          ${physicsCPrereqText}
           ${coreqText}`;
 
-        if (!isPlaced && !wasSummerCompleted && missingReqs.length === 0) {
+        if (!isPlaced && !wasSummerCompleted && missingReqs.length === 0 && !additionalPrereqError) {
           card.addEventListener('dragstart', e => onDragStart(e, course.id, 'sidebar'));
           card.addEventListener('dragend',   onDragEnd);
         }
@@ -1347,6 +2070,10 @@
     // ─────────────────────────────────────────────────────────────────
     // PLANNER RENDERING
     // ─────────────────────────────────────────────────────────────────
+
+    function isDoubleBlocked(course) {
+      return course.credits === 2 && course.id !== 'lot_csa';
+    }
 
     /** Rebuild all four grade columns */
     function renderPlanner() {
@@ -1361,7 +2088,7 @@
           <div class="grade-col-header">
             <h3>${GRADE_NAMES[grade]}</h3>
             <span class="grade-badge">Grade ${grade}</span>
-            <span class="credits-count" id="credits-${grade}">0 cr</span>
+            <span class="credits-count" id="credits-${grade}" title="Schedule load; AP Computer Science A counts as 1 credit toward the annual limit">0 / ${MAX_ANNUAL_SCHEDULE_CREDITS} load</span>
           </div>`;
 
         // Drop zone
@@ -1395,19 +2122,72 @@
     /** Build a single placed-course card inside a grade column */
     function makePlacedCard(course, grade) {
       const primaryCat = getPrimaryCourseCat(course);
+      const alternatives = getCourseLevelAlternatives(course.id);
       const card = document.createElement('div');
       card.className  = `placed-card cat-${primaryCat}`;
       card.draggable  = true;
       card.dataset.id = course.id;
+      const levelSelector = alternatives.length > 1
+        ? `<label class="placed-level-label">Course level
+            <select class="placed-level-select" aria-label="Change ${escapeHtml(course.name)} course level"
+              onchange="changePlannedCourseLevel('${course.id}', this.value, ${grade})"
+              onpointerdown="event.stopPropagation()" onmousedown="event.stopPropagation()"
+              ondragstart="event.stopPropagation()">
+              ${alternatives.map(id => {
+                const option = COURSES.find(item => item.id === id);
+                return `<option value="${id}"${id === course.id ? ' selected' : ''}>${escapeHtml(option.name)}</option>`;
+              }).join('')}
+            </select>
+          </label>`
+        : '';
       card.innerHTML  = `
         <div class="dot"></div>
-        <span class="placed-name">${course.name}</span>
+        <span class="placed-details">
+          <span class="placed-name">${course.name}</span>
+          ${isDoubleBlocked(course) ? '<span class="grade-tag">Double-blocked</span>' : ''}
+        </span>
+        ${levelSelector}
         <button class="remove-btn" title="Remove" onclick="removeCourse('${course.id}', ${grade})">✕</button>`;
 
       card.addEventListener('dragstart', e => onDragStart(e, course.id, grade));
       card.addEventListener('dragend',   onDragEnd);
 
       return card;
+    }
+
+    function changePlannedCourseLevel(currentId, replacementId, grade) {
+      if (currentId === replacementId || !plan[grade].includes(currentId)) return;
+      if (!getCourseLevelAlternatives(currentId).includes(replacementId)) {
+        showToast('That course is not an available level option.');
+        return;
+      }
+      const replacement = COURSES.find(item => item.id === replacementId);
+      if (!replacement) {
+        showToast('The selected course level could not be found.');
+        return;
+      }
+      if (!replacement.grades.includes(grade) && !isAcceleratedAcademicSequenceCourse(replacementId)) {
+        showToast(`${replacement.name} is only available in Grades ${replacement.grades.join(', ')}.`);
+        renderPlanner();
+        return;
+      }
+      const proposedPlan = { ...plan, [grade]: plan[grade].map(id => id === currentId ? replacementId : id) };
+      const prereqError = getPrereqErrorForPlan(replacementId, proposedPlan);
+      if (prereqError) {
+        showToast(prereqError);
+        renderPlanner();
+        return;
+      }
+      const loadError = getScheduleLoadError(grade, proposedPlan[grade]);
+      if (loadError) {
+        showToast(loadError);
+        renderPlanner();
+        return;
+      }
+      plan[grade] = proposedPlan[grade];
+      renderPlanner();
+      renderSidebar(document.getElementById('search').value.toLowerCase().trim());
+      savePlan();
     }
 
     /** Remove a course from a grade and refresh the UI */
@@ -1446,8 +2226,12 @@
 
         totalCredits += gradeCredits;
 
+        const scheduleLoad = getScheduleLoad(plan[grade]);
         const el = document.getElementById(`credits-${grade}`);
-        if (el) el.textContent = `${gradeCredits} cr`;
+        if (el) {
+          el.textContent = `${scheduleLoad} / ${MAX_ANNUAL_SCHEDULE_CREDITS} load`;
+          el.classList.toggle('over-limit', scheduleLoad > MAX_ANNUAL_SCHEDULE_CREDITS);
+        }
       }
 
       for (const courseId of completedIds) {
@@ -1478,6 +2262,1073 @@
         categoryPills;
     }
 
+    let cteDraft = [];
+    let cteDraftNotes = [];
+    let academicDraft = null;
+    let academicDraftSubject = '';
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[character]);
+    }
+
+    function openTool(tool) {
+      const dialog = document.getElementById('toolDialog');
+      if (tool === 'graduation') {
+        renderGraduationTool();
+      } else if (tool === 'cte') {
+        renderCTETool();
+      } else {
+        renderAcademicTool();
+      }
+      if (!dialog.open) dialog.showModal();
+    }
+
+    function closeTool() {
+      document.getElementById('toolDialog').close();
+    }
+
+    function setToolContent(title, body, footer) {
+      document.getElementById('toolDialogTitle').textContent = title;
+      document.getElementById('toolDialogBody').innerHTML = body;
+      document.getElementById('toolDialogFooter').innerHTML = footer;
+    }
+
+    function renderGraduationTool() {
+      const currentYear = Number(document.getElementById('gradClassYear')?.value || 2030);
+      const currentType = document.getElementById('gradPlanType')?.value || 'endorsement';
+      const yearOptions = Array.from({ length: 10 }, (_, index) => 2026 + index)
+        .map(year => `<option value="${year}"${year === currentYear ? ' selected' : ''}>Class of ${year}</option>`)
+        .join('');
+      const body = `
+        <div class="tool-form">
+          <div class="tool-field">
+            <label for="gradClassYear">Graduating class</label>
+            <select id="gradClassYear" onchange="renderGraduationTool()">${yearOptions}</select>
+          </div>
+          <div class="tool-field">
+            <label for="gradPlanType">Graduation plan</label>
+            <select id="gradPlanType" onchange="renderGraduationTool()">
+              <option value="endorsement"${currentType === 'endorsement' ? ' selected' : ''}>Foundation with Endorsement / Distinguished (26 credits)</option>
+              <option value="foundation"${currentType === 'foundation' ? ' selected' : ''}>Foundation (22 credits)</option>
+            </select>
+          </div>
+        </div>
+        <div id="graduationReport" class="tool-results"></div>`;
+      setToolContent(
+        'Rockwall ISD Graduation Plan',
+        body,
+        '<span class="tool-note">Planning estimate based on courses in this plan; confirm requirements with your counselor.</span><button class="btn btn-primary" type="button" onclick="window.print()">Print / Save PDF</button>'
+      );
+      renderGraduationReport();
+    }
+
+    function renderGraduationReport() {
+      const report = document.getElementById('graduationReport');
+      if (!report) return;
+      const classYear = Number(document.getElementById('gradClassYear').value);
+      const planType = document.getElementById('gradPlanType').value;
+      const requirements = planType === 'foundation'
+        ? [
+            ['English Language Arts', 'english', 4, 'English I, English II, English III, and an advanced English course. College Prep: English Language Arts is a special-education placement course and is excluded from this standard ELA count.'],
+            ['Mathematics', 'math', 3, 'Algebra I, Geometry, and Algebra II (recommended).'],
+            ['Science', 'science', 3, classYear >= 2030 ? 'Biology, Chemistry, Physics, or IPC, and one additional science course.' : 'Biology, IPC, and one additional science course.'],
+            ['Social Studies', 'ss', 3, classYear >= 2030 ? 'World Geography/History, U.S. History, Government, and Personal Financial Literacy.' : 'World Geography/History, U.S. History, Government, and Economics.'],
+            ['Physical Education', 'pe', 1, 'Physical Education credit.'],
+            ['Languages Other Than English', 'lote', 2, 'Two credits in the same language.'],
+            ['Fine Arts', 'fine', 1, 'Fine Arts credit.'],
+            ['Electives', 'elective', 5, 'Electives, including any declared endorsement requirements.']
+          ]
+        : [
+            ['English Language Arts', 'english', 4, 'English I, English II, English III, and an advanced English course. College Prep: English Language Arts is a special-education placement course and is excluded from this standard ELA count.'],
+            ['Mathematics', 'math', 4, 'Algebra I, Geometry, Algebra II, and an advanced math course.'],
+            ['Science', 'science', 4, 'Biology, Chemistry or Physics, and two additional science courses.'],
+            ['Social Studies', 'ss', 3, classYear >= 2030 ? 'World Geography/History, U.S. History, Government, and Personal Financial Literacy.' : 'World Geography/History, U.S. History, Government, and Economics.'],
+            ['Physical Education', 'pe', 1, 'Physical Education credit.'],
+            ['Languages Other Than English', 'lote', 2, 'Two credits in the same language.'],
+            ['Fine Arts', 'fine', 1, 'Fine Arts credit.'],
+            ['Electives', 'elective', 7, 'Electives, including the credit requirements of the declared endorsement.']
+          ];
+      const allIds = [...new Set([...GRADES.flatMap(grade => plan[grade]), ...summerCompleted])];
+      const earned = Object.fromEntries(requirements.map(([, category]) => [category, 0]));
+      for (const courseId of allIds) {
+        const course = COURSES.find(item => item.id === courseId);
+        if (!course) continue;
+        const categories = getCourseCats(course);
+        for (const category of Object.keys(earned)) {
+          if (category !== 'elective' && categories.includes(category)) {
+            earned[category] += course.credits;
+          }
+        }
+        const requiredCategories = ['english', 'math', 'science', 'ss', 'pe', 'lote', 'fine'];
+        if (categories.includes('elective') || !categories.some(category => requiredCategories.includes(category))) {
+          earned.elective += course.credits;
+        }
+      }
+      const total = allIds.reduce((sum, courseId) => {
+        const course = COURSES.find(item => item.id === courseId);
+        return sum + (course ? course.credits : 0);
+      }, 0);
+      const rows = requirements.map(([name, category, needed, details]) => {
+        const credits = earned[category];
+        return `<tr><th>${escapeHtml(name)}</th><td>${needed}</td><td>${credits}</td><td>${Math.max(0, needed - credits)}</td><td>${escapeHtml(details)}</td></tr>`;
+      }).join('');
+      const gradeSections = GRADES.map(grade => {
+        const names = plan[grade].map(id => COURSES.find(course => course.id === id)?.name || id);
+        return `<div><b>${GRADE_NAMES[grade]}</b>${names.length
+          ? `<ul class="tool-course-list">${names.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>`
+          : '<p class="tool-note">No courses planned.</p>'}</div>`;
+      }).join('');
+      const summerNames = summerCompleted.map(id => COURSES.find(course => course.id === id)?.name || id);
+      report.innerHTML = `
+        <h3>Rockwall ISD Graduation Plan · Class of ${classYear}</h3>
+        <p class="tool-note">The goal of Rockwall ISD is for students to graduate college, career, or military ready. To earn an endorsement, students need 26 credits, including a fourth math and science credit. Algebra II is required for Distinguished Achievement and some endorsements.</p>
+        ${planType === 'foundation' ? '<p class="tool-status warning">The Foundation-only plan may be selected after Grade 10 and requires administrator approval.</p>' : ''}
+        <p class="tool-status">Credits currently planned or completed: <b>${total}</b> / ${planType === 'foundation' ? 22 : 26}</p>
+        <table class="tool-table">
+          <thead><tr><th>Requirement</th><th>Needed</th><th>Planned</th><th>Remaining</th><th>Course guidance</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr><th>Total credits</th><td>${planType === 'foundation' ? 22 : 26}</td><td>${total}</td><td>${Math.max(0, (planType === 'foundation' ? 22 : 26) - total)}</td><td>Planned courses across Grades 9–12</td></tr></tfoot>
+        </table>
+        <h3>Planned Courses</h3>
+        <div class="tool-results">${gradeSections}</div>
+        ${summerNames.length ? `<h3>Summer / Previously Completed</h3><ul class="tool-course-list">${summerNames.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>` : ''}`;
+    }
+
+    function renderCTETool() {
+      const body = `
+        <div class="tool-form">
+          <div class="tool-field">
+            <label for="ctePathway">Program of Study</label>
+            <select id="ctePathway" onchange="updateCTEPreview()">
+              ${CTE_PATHWAYS.map((pathway, index) => `<option value="${index}">${escapeHtml(pathway.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="tool-field">
+            <label for="cteStartGrade">Start pathway in</label>
+            <select id="cteStartGrade" onchange="updateCTEPreview()">
+              ${GRADES.map(grade => `<option value="${grade}"${grade === 9 ? ' selected' : ''}>${GRADE_NAMES[grade]}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn btn-outline" type="button" onclick="updateCTEPreview()">Refresh preview</button>
+        </div>
+        <p class="tool-note">Preview and add one Program of Study at a time. Existing courses are kept; courses already planned or completed are not duplicated. Required courses outside the pathway may still be listed as prerequisites.</p>
+        <div id="ctePreview" class="tool-results"></div>`;
+      setToolContent(
+        'CTE Programs of Study',
+        body,
+        '<button class="btn btn-outline" type="button" onclick="closeTool()">Cancel</button><button class="btn btn-primary" type="button" onclick="applyCTEDraft()">Add pathway to plan</button>'
+      );
+      updateCTEPreview();
+    }
+
+    function updateCTEPreview() {
+      const preview = document.getElementById('ctePreview');
+      if (!preview) return;
+      const pathway = CTE_PATHWAYS[Number(document.getElementById('ctePathway').value)];
+      const startGrade = Number(document.getElementById('cteStartGrade').value);
+      cteDraft = [];
+      cteDraftNotes = [];
+      let previousStageGrade = startGrade - 1;
+
+      pathway.groups.forEach((stage, stageIndex) => {
+        const stageCourses = stage.map(courseId => COURSES.find(course => course.id === courseId)).filter(Boolean);
+        if (!stageCourses.length) return;
+        const preferredGrade = Math.max(startGrade + stageIndex, previousStageGrade);
+        const alreadyPlannedGrades = stageCourses
+          .map(course => GRADES.find(grade => plan[grade].includes(course.id)))
+          .filter(grade => grade !== undefined);
+        const requiredGrade = alreadyPlannedGrades.length
+          ? Math.max(preferredGrade, ...alreadyPlannedGrades)
+          : preferredGrade;
+        const possibleGrades = stageCourses
+          .map(course => course.grades.filter(grade => grade >= requiredGrade))
+          .reduce((common, grades) => common.filter(grade => grades.includes(grade)));
+        const stageGrade = possibleGrades[0];
+
+        if (!stageGrade) {
+          cteDraftNotes.push(`${stageCourses.map(course => course.name).join(' and ')} cannot fit after the prior pathway courses within the available grade levels.`);
+          return;
+        }
+
+        previousStageGrade = stageGrade;
+        for (const course of stageCourses) {
+          if (summerCompleted.includes(course.id) || GRADES.some(grade => plan[grade].includes(course.id))) continue;
+          cteDraft.push({ courseId: course.id, grade: stageGrade });
+        }
+      });
+
+      if (!cteDraft.length && !cteDraftNotes.length) {
+        preview.innerHTML = '<p class="tool-status">All courses in this pathway are already planned or completed.</p>';
+        return;
+      }
+      const rows = cteDraft.map(({ courseId, grade }) => {
+        const course = COURSES.find(item => item.id === courseId);
+        return `<tr><td>${escapeHtml(course.name)}</td><td>${GRADE_NAMES[grade]}</td></tr>`;
+      }).join('');
+      const previousPlan = plan;
+      const previewPlan = Object.fromEntries(GRADES.map(grade => [grade, [...plan[grade]]]));
+      for (const { courseId, grade } of cteDraft) {
+        previewPlan[grade].push(courseId);
+      }
+      plan = previewPlan;
+      const warnings = [
+        ...cteDraftNotes.map(note => `<li>${escapeHtml(note)}</li>`),
+        ...cteDraft.flatMap(({ courseId, grade }) => {
+          const missing = getMissingPrereqs(courseId);
+          const concurrent = getConcurrentPrereqError(courseId, grade, plan[grade]);
+          const additional = getAdditionalPrereqError(courseId);
+          const messages = [
+            missing.length ? `Needs: ${formatMissingPrereqGroups(courseId).join('; ')}` : '',
+            concurrent,
+            additional
+          ].filter(Boolean);
+          return messages.length
+            ? [`<li><b>${escapeHtml(COURSES.find(course => course.id === courseId)?.name || courseId)}:</b> ${messages.map(escapeHtml).join(' ')}</li>`]
+            : [];
+        })
+      ];
+      warnings.push(...GRADES
+        .map(grade => getScheduleLoadError(grade, plan[grade]))
+        .filter(Boolean)
+        .map(error => `<li>${escapeHtml(error)}</li>`));
+      plan = previousPlan;
+      preview.innerHTML = `
+        ${rows ? `<table class="tool-table"><thead><tr><th>Course</th><th>Suggested year</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
+        <p class="tool-status">${cteDraft.length} ${cteDraft.length === 1 ? 'course' : 'courses'} will be added to ${escapeHtml(pathway.name)}.</p>
+        ${warnings.length ? `<div class="tool-status warning">Review these prerequisites and scheduling notes:<ul class="tool-course-list">${warnings.join('')}</ul></div>` : '<p class="tool-status">All currently modeled course requirements are met by the proposed pathway.</p>'}`;
+    }
+
+    function applyCTEDraft() {
+      if (!cteDraft.length) {
+        showToast('There are no new courses to add for this pathway.');
+        return;
+      }
+      const proposedPlan = Object.fromEntries(GRADES.map(grade => [grade, [...plan[grade]]]));
+      for (const { courseId, grade } of cteDraft) {
+        if (!proposedPlan[grade].includes(courseId)) proposedPlan[grade].push(courseId);
+      }
+      for (const grade of GRADES) {
+        const loadError = getScheduleLoadError(grade, proposedPlan[grade]);
+        if (loadError) {
+          showToast(loadError);
+          return;
+        }
+      }
+      plan = proposedPlan;
+      renderPlanner();
+      renderSidebar(document.getElementById('search').value.toLowerCase().trim());
+      updateCredits();
+      savePlan();
+      closeTool();
+    }
+
+    const MATH_TARGET_IDS = [
+      ...ALGEBRA_II_COURSES, ...PRECALC_COURSES, ...CALCL_COURSES,
+      'm_stats', 'm_statsor', 'm_ibapp', 'm_ibana', 'm_extalg', 'm_calc3', 'm_diffeq'
+    ];
+    const CORE_MATH_SEQUENCE_IDS = [...new Set([...MATH_START_COURSE_IDS, ...MATH_TARGET_IDS])];
+
+    const ACADEMIC_SUBJECTS = {
+      english: {
+        label: 'English Language Arts',
+        category: 'english',
+        startIds: ['e1', 'e1h', 'e1sg', 'e1esol'],
+        courseIds: COURSES.filter(course => getCourseCats(course).includes('english')).map(course => course.id),
+        goalIds: ['e2', 'e2h', 'e2sg', 'e3', 'e3ap', 'e4', 'e4ap', 'eiblit2', 'eibll2', 'e1301', 'e1302', 'e2332', 'e2333']
+      },
+      math: {
+        label: 'Mathematics',
+        category: 'math',
+        startIds: MATH_START_COURSE_IDS,
+        courseIds: MATH_PATH_COURSE_IDS,
+        goalIds: MATH_TARGET_IDS
+      },
+      science: {
+        label: 'Science',
+        category: 'science',
+        startIds: BIOLOGY_COURSES,
+        courseIds: SCIENCE_CREDIT_COURSES,
+        goalIds: SCIENCE_CREDIT_COURSES.filter(id => !BIOLOGY_COURSES.includes(id))
+      },
+      socialStudies: {
+        label: 'Social Studies',
+        category: 'ss',
+        startIds: ['ss_geo', 'ss_geoh', 'ss_aphug'],
+        courseIds: COURSES.filter(course => getCourseCats(course).includes('ss')).map(course => course.id),
+        goalIds: ['ss_us', 'ss_apus', 'ss_hist1', 'ss_gov', 'ss_apgov', 'ss_econ', 'ss_pfl', 'ss_pfle', 'ss_apmacro', 'ss_apmicro', 'ss_govt_dc', 'ss_econ_dc']
+      },
+      lote: {
+        label: 'Languages Other Than English',
+        category: 'lote',
+        startIds: COURSES.filter(course => /^(lot_sp|lot_fr|lot_asl)/.test(course.id)).map(course => course.id)
+          .concat(['lot_cs1h', 'lot_csp']),
+        courseIds: [],
+        goalIds: []
+      }
+    };
+
+    function getAcademicCourseIds(subjectKey, startId = '') {
+      const subject = ACADEMIC_SUBJECTS[subjectKey];
+      if (!subject) return [];
+      if (subjectKey !== 'lote') return subject.courseIds;
+      if (startId.startsWith('lot_sp')) return COURSES.filter(course => course.id.startsWith('lot_sp')).map(course => course.id);
+      if (startId.startsWith('lot_fr')) return COURSES.filter(course => course.id.startsWith('lot_fr')).map(course => course.id);
+      if (startId.startsWith('lot_asl')) return COURSES.filter(course => course.id.startsWith('lot_asl')).map(course => course.id);
+      if (startId.startsWith('lot_cs')) return ['lot_cs1h', 'lot_csp', 'lot_csa', 'lot_cs3'];
+      return [];
+    }
+
+    function renderAcademicTool() {
+      const body = `
+        <div class="tool-form">
+          <div class="tool-field">
+            <label for="academicSubject">Academic subject</label>
+            <select id="academicSubject" onchange="onAcademicSubjectChange()">
+              ${Object.entries(ACADEMIC_SUBJECTS).map(([key, subject]) => `<option value="${key}">${escapeHtml(subject.label)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="tool-field" id="academicStartField">
+            <label for="academicStartCourse">Freshman-year starting course</label>
+            <select id="academicStartCourse" onchange="updateAcademicOptions()"></select>
+          </div>
+          <div class="tool-field" id="socialStudiesTrackField" hidden style="display: none">
+            <label for="socialStudiesTrack">Social Studies course track</label>
+            <select id="socialStudiesTrack" onchange="updateAcademicOptions()">
+              <option value="onlevel">On-level only</option>
+              <option value="ap">AP only</option>
+              <option value="dual">Dual credit</option>
+            </select>
+          </div>
+          <div class="tool-field">
+            <label for="academicGoalCourse">Goal course</label>
+            <select id="academicGoalCourse" onchange="buildAcademicDraft()"></select>
+          </div>
+          <div class="tool-field science-concurrent-field" id="scienceConcurrentField" hidden style="display: none">
+            <label>Also schedule in goal year</label>
+            <div class="science-concurrent-options" id="scienceConcurrentOptions"></div>
+          </div>
+          <div class="tool-field">
+            <label for="academicGoalGrade">Take goal in</label>
+            <select id="academicGoalGrade" onchange="updateAcademicOptions()"><option value="10">10th Grade (Sophomore year)</option><option value="11">11th Grade (Junior year)</option><option value="12" selected>12th Grade (Senior year)</option></select>
+          </div>
+          <button class="btn btn-outline" type="button" onclick="buildAcademicDraft()">Build sequence</button>
+        </div>
+        <p id="academicSubjectNote" class="tool-note">Build a course sequence for English, math, science, social studies, or LOTE. The suggested path follows catalog prerequisites where modeled. Existing courses are never removed. Confirm your final course choices and graduation requirements with your counselor.</p>
+        <div id="academicPreview" class="tool-results"></div>`;
+      setToolContent(
+        'Plan Core Academics',
+        body,
+        '<button class="btn btn-outline" type="button" onclick="closeTool()">Cancel</button><button class="btn btn-primary" type="button" onclick="applyAcademicDraft()">Add academic sequence</button>'
+      );
+      previousAcademicSubject = document.getElementById('academicSubject').value;
+      updateAcademicOptions();
+    }
+
+    let previousAcademicSubject = 'english';
+
+    function onAcademicSubjectChange() {
+      const subjectSelect = document.getElementById('academicSubject');
+      if (subjectSelect.value === 'science' && previousAcademicSubject !== 'science') {
+        const hasMathPlan = [...GRADES.flatMap(grade => plan[grade]), ...summerCompleted]
+          .some(courseId => isCoreMathSequenceCourse(courseId));
+        if (!hasMathPlan && !window.confirm('Plan your math sequence first because it affects science prerequisites. Continue to science planning anyway?')) {
+          subjectSelect.value = previousAcademicSubject;
+          return;
+        }
+      }
+      previousAcademicSubject = subjectSelect.value;
+      updateAcademicOptions();
+    }
+
+    function selectAcademicStartingCourse(courseId) {
+      const select = document.getElementById('academicStartCourse');
+      if (!select) return;
+      select.value = courseId;
+      updateAcademicOptions();
+    }
+
+    function updateAcademicOptions() {
+      const subjectSelect = document.getElementById('academicSubject');
+      const startSelect = document.getElementById('academicStartCourse');
+      const goalSelect = document.getElementById('academicGoalCourse');
+      const gradeSelect = document.getElementById('academicGoalGrade');
+      const socialTrackField = document.getElementById('socialStudiesTrackField');
+      const socialTrackSelect = document.getElementById('socialStudiesTrack');
+      const scienceConcurrentField = document.getElementById('scienceConcurrentField');
+      if (!subjectSelect || !startSelect || !goalSelect || !gradeSelect || !socialTrackField || !socialTrackSelect) return;
+
+      const subjectKey = subjectSelect.value;
+      const subject = ACADEMIC_SUBJECTS[subjectKey];
+      const previousStart = startSelect.value;
+      const previousGoal = goalSelect.value;
+      const goalGrade = Number(gradeSelect.value);
+      const startField = document.getElementById('academicStartField');
+      const subjectNote = document.getElementById('academicSubjectNote');
+      socialTrackField.hidden = subjectKey !== 'socialStudies';
+      socialTrackField.style.display = subjectKey === 'socialStudies' ? '' : 'none';
+      let starts = subject.startIds.map(id => COURSES.find(course => course.id === id)).filter(Boolean);
+      let alreadySelectedBiologyId = '';
+      if (subjectKey === 'science') {
+        const freshmanBiologyIds = [...new Set([...plan[9], ...summerCompleted].filter(id => BIOLOGY_COURSES.includes(id)))];
+        if (freshmanBiologyIds.length === 1) {
+          alreadySelectedBiologyId = freshmanBiologyIds[0];
+          starts = starts.filter(course => course.id === alreadySelectedBiologyId);
+        }
+      }
+      startField.hidden = subjectKey === 'science' && Boolean(alreadySelectedBiologyId);
+      if (subjectNote) {
+        subjectNote.textContent = subjectKey === 'science'
+          ? 'Before building a science sequence, plan your math sequence first. Math prerequisites can affect which science courses fit. The suggested path follows modeled prerequisites; confirm choices with your counselor.'
+          : 'Build a course sequence for English, math, science, social studies, or LOTE. The suggested path follows catalog prerequisites where modeled. Existing courses are never removed. Confirm your final course choices and graduation requirements with your counselor.';
+      }
+      const previousStartIsValid = starts.some(course => course.id === previousStart);
+      const startId = starts.some(course => course.id === previousStart)
+        ? previousStart
+        : alreadySelectedBiologyId || starts[0]?.id || '';
+      startSelect.innerHTML = starts.map(course =>
+        `<option value="${course.id}"${course.id === startId ? ' selected' : ''}>${escapeHtml(course.name)}</option>`
+      ).join('');
+      if (subjectKey === 'science' && alreadySelectedBiologyId && previousStartIsValid) {
+        startSelect.value = alreadySelectedBiologyId;
+      }
+
+      const candidateIds = getAcademicCourseIds(subjectKey, startId);
+      const goalIds = subjectKey === 'socialStudies'
+        ? getSocialStudiesGoalIds(socialTrackSelect.value, goalGrade)
+        : subjectKey === 'math'
+        ? subject.goalIds.filter(id => findMathPath(startId, id, goalGrade))
+        : subjectKey === 'lote'
+          ? candidateIds.filter(id => id !== startId &&
+              !getEarlierLanguageCourseIds(startId).includes(id) &&
+              findAcademicPath(subjectKey, startId, id, goalGrade))
+          : subject.goalIds;
+      const completedBeforeStart = new Set(getImplicitAcademicSummerIds(subjectKey, startId));
+      const eligibleEnglishGoals = subjectKey === 'english'
+        ? goalIds.filter(id => !['e2', 'e2h', 'e2sg'].includes(id) ||
+          (goalGrade === 10 && id !== startId))
+        : goalIds;
+      const goals = eligibleEnglishGoals
+        .map(id => COURSES.find(course => course.id === id))
+        .filter(course => course &&
+          (['math', 'lote'].includes(subjectKey) || course.grades.includes(goalGrade)) &&
+          course.id !== startId && !completedBeforeStart.has(course.id));
+      const goalId = goals.some(course => course.id === previousGoal) ? previousGoal : goals[0]?.id || '';
+      goalSelect.innerHTML = goals.map(course =>
+        `<option value="${course.id}"${course.id === goalId ? ' selected' : ''}>${escapeHtml(course.name)}</option>`
+      ).join('');
+      goalSelect.disabled = goals.length === 0;
+      if (scienceConcurrentField) {
+        scienceConcurrentField.hidden = subjectKey !== 'science';
+        scienceConcurrentField.style.display = subjectKey === 'science' ? '' : 'none';
+      }
+      if (subjectKey === 'science') renderScienceConcurrentOptions(startId, goalId, goalGrade);
+      buildAcademicDraft();
+    }
+
+    function renderScienceConcurrentOptions(startId, goalId, grade) {
+      const container = document.getElementById('scienceConcurrentOptions');
+      if (!container) return;
+      const previousSelection = new Set(
+        [...container.querySelectorAll('input:checked')].map(input => input.value)
+      );
+      const existingMathIds = plan[grade].filter(isCoreMathSequenceCourse);
+      const scienceOptions = SCIENCE_CREDIT_COURSES.filter(id => {
+        const course = COURSES.find(item => item.id === id);
+        return course && course.grades.includes(grade) && !BIOLOGY_COURSES.includes(id) &&
+          id !== startId && id !== goalId;
+      });
+      const mathOptions = existingMathIds.length
+        ? []
+        : ALGEBRA_II_COURSES.filter(id => COURSES.find(item => item.id === id)?.grades.includes(grade));
+      const optionIds = [...new Set([...scienceOptions, ...mathOptions])];
+      container.innerHTML = optionIds.length
+        ? optionIds.map(id => {
+            const course = COURSES.find(item => item.id === id);
+            return `<label><input type="checkbox" value="${id}"${previousSelection.has(id) ? ' checked' : ''}
+              onchange="buildAcademicDraft()"> ${escapeHtml(course.name)}</label>`;
+          }).join('')
+        : '<span class="tool-note">No additional courses are available for this grade.</span>';
+    }
+
+    function getSocialStudiesGoalIds(track, grade) {
+      if (grade === 11) {
+        if (track === 'ap') return ['ss_apus'];
+        if (track === 'dual') return ['ss_hist1', 'ss_hist2'];
+        return ['ss_us'];
+      }
+      if (grade === 10) return [track === 'ap' ? 'ss_apwh' : 'ss_wh'];
+      if (track === 'ap') return ['ss_apgov', 'ss_apmacro'];
+      if (track === 'dual') return ['ss_govt_dc', 'ss_econ_dc'];
+      return ['ss_gov', 'ss_econ'];
+    }
+
+    function isCoreMathSequenceCourse(courseId) {
+      return CORE_MATH_SEQUENCE_IDS.includes(courseId);
+    }
+
+    function isAcceleratedAcademicSequenceCourse(courseId) {
+      const course = COURSES.find(item => item.id === courseId);
+      return isCoreMathSequenceCourse(courseId) ||
+        Boolean(course && getCourseCats(course).includes('lote'));
+    }
+
+    function getAcceleratedSequencePrereqError(courseId, grade) {
+      if (!isAcceleratedAcademicSequenceCourse(courseId)) return '';
+      return getPrereqErrorBeforeGrade(courseId, grade);
+    }
+
+    function getPrereqErrorBeforeGrade(courseId, grade, planByGrade = plan) {
+      const completedBeforeGrade = new Set([
+        ...summerCompleted,
+        ...GRADES.filter(plannedGrade => plannedGrade < grade).flatMap(plannedGrade => planByGrade[plannedGrade])
+      ]);
+      const rule = COURSE_PREREQS[courseId] || [];
+      if (isPrereqSatisfied(rule, completedBeforeGrade)) return '';
+      const missing = formatPrerequisiteRule(rule, completedBeforeGrade);
+      return missing ? `Complete ${missing} before Grade ${grade}.` : '';
+    }
+
+    function getPrereqErrorForPlan(courseId, planByGrade = plan) {
+      const completed = new Set([...summerCompleted, ...GRADES.flatMap(grade => planByGrade[grade])]);
+      const rule = COURSE_PREREQS[courseId] || [];
+      if (isPrereqSatisfied(rule, completed)) return '';
+      const missing = formatPrerequisiteRule(rule, completed);
+      return missing ? `You need: ${missing}.` : '';
+    }
+
+    function getPrereqErrorAtOrBeforeGrade(courseId, grade, planByGrade = plan) {
+      const completed = new Set([
+        ...summerCompleted,
+        ...GRADES.filter(plannedGrade => plannedGrade <= grade).flatMap(plannedGrade => planByGrade[plannedGrade])
+      ]);
+      const rule = COURSE_PREREQS[courseId] || [];
+      if (isPrereqSatisfied(rule, completed)) return '';
+      const missing = formatPrerequisiteRule(rule, completed);
+      return missing ? `Complete ${missing} by Grade ${grade}.` : '';
+    }
+
+    function getImplicitAcademicSummerIds(subjectKey, startId) {
+      if (subjectKey === 'math') {
+        const completedBeforeMathStart = {
+          m_geo: ['m_alg1'],
+          m_geoh: ['m_alg1'],
+          m_alg2: ['m_alg1', 'm_geo'],
+          m_alg2h: ['m_alg1', 'm_geoh'],
+          m_alg2or: ['m_alg1', 'm_geoh'],
+          m_precalc: ['m_alg1', 'm_geo', 'm_alg2'],
+          m_precalch: ['m_alg1', 'm_geoh', 'm_alg2h'],
+          m_precalcor: ['m_alg1', 'm_geoh', 'm_alg2or'],
+          m_calcab: ['m_alg1', 'm_geoh', 'm_alg2h', 'm_precalch'],
+          m_calcbc: ['m_alg1', 'm_geoh', 'm_alg2h', 'm_precalch', 'm_calcab'],
+          m_calc3: ['m_alg1', 'm_geoh', 'm_alg2h', 'm_precalch', 'm_calcab', 'm_calcbc'],
+          m_diffeq: ['m_alg1', 'm_geoh', 'm_alg2h', 'm_precalch', 'm_calcab', 'm_calcbc']
+        };
+        if (completedBeforeMathStart[startId]) return completedBeforeMathStart[startId];
+      }
+      if (subjectKey === 'lote') {
+        const completedBeforeLanguageStart = {
+          lot_sp2: ['lot_sp1'],
+          lot_sp2h: ['lot_sp1'],
+          lot_sp2ns: ['lot_sp1'],
+          lot_sp3: ['lot_sp1', 'lot_sp2'],
+          lot_sp4: ['lot_sp1', 'lot_sp2', 'lot_sp3'],
+          lot_sp5: ['lot_sp1', 'lot_sp2', 'lot_sp3', 'lot_sp4'],
+          lot_ibsp1: ['lot_sp1', 'lot_sp2', 'lot_sp3'],
+          lot_ibsp2: ['lot_sp1', 'lot_sp2', 'lot_sp3', 'lot_ibsp1'],
+          lot_fr2: ['lot_fr1'],
+          lot_fr2h: ['lot_fr1'],
+          lot_fr3: ['lot_fr1', 'lot_fr2'],
+          lot_fr4: ['lot_fr1', 'lot_fr2', 'lot_fr3'],
+          lot_ibfr1: ['lot_fr1', 'lot_fr2', 'lot_fr3'],
+          lot_ibfr2: ['lot_fr1', 'lot_fr2', 'lot_fr3', 'lot_ibfr1'],
+          lot_asl2: ['lot_asl1'],
+          lot_asl3: ['lot_asl1', 'lot_asl2'],
+          lot_asl4: ['lot_asl1', 'lot_asl2', 'lot_asl3'],
+          lot_csp: ['lot_cs1h'],
+          lot_csa: ['lot_cs1h', 'lot_csp'],
+          lot_cs3: ['lot_cs1h', 'lot_csp', 'lot_csa']
+        };
+        if (completedBeforeLanguageStart[startId]) return completedBeforeLanguageStart[startId];
+      }
+      return [];
+    }
+
+    function getEarlierMathCourseIds(startId) {
+      const stages = [
+        ['m_alg1'],
+        GEOMETRY_COURSES,
+        ALGEBRA_II_COURSES,
+        PRECALC_COURSES,
+        ['m_calcab'],
+        ['m_calcbc']
+      ];
+      const selectedStage = stages.findIndex(stage => stage.includes(startId));
+      if (selectedStage < 0) return [];
+      return stages.slice(0, selectedStage).flat();
+    }
+
+    function getAlternativeMathStartCourseIds(startId) {
+      const stages = [
+        ['m_alg1'],
+        GEOMETRY_COURSES,
+        ALGEBRA_II_COURSES,
+        PRECALC_COURSES,
+        ['m_calcab'],
+        ['m_calcbc']
+      ];
+      const selectedStage = stages.find(stage => stage.includes(startId));
+      return selectedStage ? selectedStage.filter(id => id !== startId) : [];
+    }
+
+    function getEarlierLanguageCourseIds(startId) {
+      const stages = [
+        [
+          [['lot_sp1', 'lot_sp1ns'], ['lot_sp2', 'lot_sp2h', 'lot_sp2ns'], ['lot_sp3'], ['lot_sp4'], ['lot_sp5']],
+          [['lot_sp1', 'lot_sp1ns'], ['lot_sp2', 'lot_sp2h', 'lot_sp2ns'], ['lot_sp3'], ['lot_ibsp1'], ['lot_ibsp2']]
+        ],
+        [
+          [['lot_fr1'], ['lot_fr2', 'lot_fr2h'], ['lot_fr3'], ['lot_fr4']],
+          [['lot_fr1'], ['lot_fr2', 'lot_fr2h'], ['lot_fr3'], ['lot_ibfr1'], ['lot_ibfr2']]
+        ],
+        [['lot_asl1'], ['lot_asl2'], ['lot_asl3'], ['lot_asl4']],
+        [['lot_cs1h'], ['lot_csp'], ['lot_csa'], ['lot_cs3']]
+      ];
+      for (const language of stages.slice(0, 2)) {
+        for (const languageStages of language) {
+          const selectedStage = languageStages.findIndex(stage => stage.includes(startId));
+          if (selectedStage >= 0) return languageStages.slice(0, selectedStage).flat();
+        }
+      }
+      for (const languageStages of stages.slice(2)) {
+        const selectedStage = languageStages.findIndex(stage => stage.includes(startId));
+        if (selectedStage >= 0) return languageStages.slice(0, selectedStage).flat();
+      }
+      return [];
+    }
+
+    function findMathPath(startId, targetId, targetGrade) {
+      const start = COURSES.find(course => course.id === startId);
+      const target = COURSES.find(course => course.id === targetId);
+      if (!start || !target || startId === targetId) return null;
+      if (targetId === 'm_calcbc' && targetGrade === 12) {
+        const startCourseIds = [
+          ...ALGEBRA_II_COURSES,
+          ...PRECALC_COURSES.filter(id => id !== 'm_precalc')
+        ];
+        if (startCourseIds.includes(startId)) {
+          const precalculusId = startId === 'm_alg2or' || startId === 'm_precalcor'
+            ? 'm_precalcor'
+            : startId.startsWith('m_precalc')
+              ? startId
+              : 'm_precalch';
+          const isAlgebraTwoStart = ALGEBRA_II_COURSES.includes(startId);
+          return {
+            ids: isAlgebraTwoStart ? [startId, precalculusId, 'm_calcab', 'm_calcbc'] : [startId, 'm_calcab', 'm_calcbc'],
+            grades: isAlgebraTwoStart ? [9, 10, 11, 12] : [9, 11, 12]
+          };
+        }
+      }
+
+      const priorCredits = new Set([
+        ...summerCompleted,
+        ...getImplicitAcademicSummerIds('math', startId)
+      ]);
+      const queue = [{ ids: [startId], grades: [9] }];
+      const seen = new Set();
+      while (queue.length) {
+        const current = queue.shift();
+        const signature = `${current.ids.join(',')}|${current.grades.join(',')}`;
+        if (seen.has(signature)) continue;
+        seen.add(signature);
+        const lastGrade = current.grades[current.grades.length - 1];
+        const completed = new Set([...priorCredits, ...current.ids]);
+        const excludedStartAlternatives = getAlternativeMathStartCourseIds(startId);
+        for (const candidateId of MATH_PATH_COURSE_IDS.filter(id =>
+          !getEarlierMathCourseIds(startId).includes(id) && !excludedStartAlternatives.includes(id))) {
+          if (current.ids.includes(candidateId)) continue;
+          const candidate = COURSES.find(course => course.id === candidateId);
+          if (!candidate || !isPrereqSatisfied(COURSE_PREREQS[candidateId] || [], completed)) continue;
+          const isGoal = candidateId === targetId;
+          const possibleGrades = isGoal
+            ? [targetGrade]
+            : GRADES.filter(grade => grade > lastGrade && grade < targetGrade);
+          for (const grade of possibleGrades) {
+            if (grade <= lastGrade) continue;
+            const next = { ids: [...current.ids, candidateId], grades: [...current.grades, grade] };
+            if (isGoal) {
+              if (['m_calc3', 'm_diffeq'].includes(targetId)) {
+                const pairedCourseId = targetId === 'm_calc3' ? 'm_diffeq' : 'm_calc3';
+                return { ids: [...next.ids, pairedCourseId], grades: [...next.grades, grade] };
+              }
+              return next;
+            }
+            queue.push(next);
+          }
+        }
+      }
+      return null;
+    }
+
+    function findAcademicPath(subjectKey, startId, targetId, targetGrade, socialTrack = 'onlevel') {
+      if (subjectKey === 'math') return findMathPath(startId, targetId, targetGrade);
+      const start = COURSES.find(course => course.id === startId);
+      const target = COURSES.find(course => course.id === targetId);
+      if (!start || !target || startId === targetId ||
+          (subjectKey !== 'lote' && !target.grades.includes(targetGrade))) return null;
+
+      if (subjectKey === 'english') {
+        const chooseEnglishTwo = isAp => {
+          if (startId === 'e1sg') return 'e2sg';
+          if (startId === 'e1h' || isAp) return 'e2h';
+          return 'e2';
+        };
+        const isApPath = ['e3ap', 'e4ap'].includes(targetId);
+        const englishTwoId = chooseEnglishTwo(isApPath);
+        const baseIds = [startId, englishTwoId, 'e3'];
+        const baseGrades = [9, 10, 11];
+        if (['e2', 'e2h', 'e2sg'].includes(targetId)) {
+          return targetGrade === 10 ? { ids: [startId, targetId], grades: [9, 10] } : null;
+        }
+        if (['e1301', 'e1302'].includes(targetId)) {
+          if (targetGrade === 11) {
+            return { ids: [startId, englishTwoId, 'e1301', 'e1302'], grades: [9, 10, 11, 11] };
+          }
+          if (targetGrade === 12) {
+            return { ids: [...baseIds, 'e1301', 'e1302'], grades: [...baseGrades, 12, 12] };
+          }
+          return null;
+        }
+        if (['e2332', 'e2333'].includes(targetId)) {
+          if (targetGrade !== 12) return null;
+          return {
+            ids: [startId, englishTwoId, 'e1301', 'e1302', 'e2332', 'e2333'],
+            grades: [9, 10, 11, 11, 12, 12]
+          };
+        }
+        if (['eiblit2', 'eibll2'].includes(targetId)) {
+          const firstYearId = targetId === 'eiblit2' ? 'eiblit' : 'eibll';
+          if (targetGrade !== 12) return null;
+          return { ids: [startId, englishTwoId, firstYearId, targetId], grades: [9, 10, 11, 12] };
+        }
+        if (targetId === 'e4ap') {
+          return targetGrade === 12
+            ? { ids: [startId, englishTwoId, 'e3ap', 'e4ap'], grades: [9, 10, 11, 12] }
+            : null;
+        }
+        if (['e3', 'e3ap'].includes(targetId)) {
+          const englishTwoForGoal = chooseEnglishTwo(targetId === 'e3ap');
+          return targetGrade === 11
+            ? { ids: [startId, englishTwoForGoal, targetId], grades: [9, 10, 11] }
+            : null;
+        }
+        if (targetId === 'e4') {
+          if (targetGrade !== 12) return null;
+          return { ids: [startId, englishTwoId, 'e3', 'e4'], grades: [9, 10, 11, 12] };
+        }
+        return null;
+      }
+
+      if (subjectKey === 'socialStudies') {
+        const sophomoreCourse = socialTrack === 'ap' ? 'ss_apwh' : 'ss_wh';
+        if (targetGrade === 10) {
+          return { ids: [startId, targetId], grades: [9, 10] };
+        }
+        if (targetGrade === 11) {
+          if (socialTrack === 'ap') {
+            return { ids: [startId, 'ss_apwh', 'ss_apus'], grades: [9, 10, 11] };
+          }
+          if (socialTrack === 'dual') {
+            return { ids: [startId, 'ss_wh', 'ss_hist1', 'ss_hist2'], grades: [9, 10, 11, 11] };
+          }
+          return { ids: [startId, 'ss_wh', 'ss_us'], grades: [9, 10, 11] };
+        }
+        if (socialTrack === 'ap') {
+          const seniorEconomics = targetId === 'ss_apmicro' ? 'ss_apmicro' : 'ss_apmacro';
+          return {
+            ids: [startId, sophomoreCourse, 'ss_apus', 'ss_apgov', seniorEconomics],
+            grades: [9, 10, 11, 12, 12]
+          };
+        }
+        if (socialTrack === 'dual') {
+          return {
+           ids: [startId, 'ss_wh', 'ss_hist1', 'ss_hist2', 'ss_govt_dc', 'ss_econ_dc'],
+           grades: [9, 10, 11, 11, 12, 12]
+          };
+        }
+        return {
+          ids: [startId, 'ss_wh', 'ss_us', 'ss_gov', 'ss_econ'],
+          grades: [9, 10, 11, 12, 12]
+        };
+      }
+
+      if (subjectKey === 'science' && ['sci_apbio', 'sci_apphys1'].includes(targetId)) {
+        const concurrentPrereqs = ['sci_chemh'];
+        return {
+          ids: [...new Set([startId, ...concurrentPrereqs, targetId])],
+          grades: [9, ...concurrentPrereqs.map(() => targetGrade), targetGrade]
+        };
+      }
+
+      const completedBeforeStart = new Set(getImplicitAcademicSummerIds(subjectKey, startId));
+      const candidateIds = getAcademicCourseIds(subjectKey, startId)
+        .filter(id => !completedBeforeStart.has(id) &&
+          !getEarlierLanguageCourseIds(startId).includes(id));
+      const completedBase = new Set([
+        ...getCompletedCourseIds(),
+        ...getImplicitAcademicSummerIds(subjectKey, startId)
+      ]);
+      const queue = [{ ids: [startId], grades: [9] }];
+      const seen = new Set();
+      while (queue.length) {
+        const current = queue.shift();
+        const signature = `${current.ids.join(',')}|${current.grades.join(',')}`;
+        if (seen.has(signature)) continue;
+        seen.add(signature);
+        const lastGrade = current.grades.at(-1);
+        const completed = new Set([...completedBase, ...current.ids]);
+        for (const candidateId of candidateIds) {
+          if (current.ids.includes(candidateId)) continue;
+          const candidate = COURSES.find(course => course.id === candidateId);
+          if (!candidate || !isPrereqSatisfied(COURSE_PREREQS[candidateId] || [], completed)) continue;
+          const isGoal = candidateId === targetId;
+          const possibleGrades = isGoal
+            ? [targetGrade]
+            : GRADES.filter(grade => grade > lastGrade && grade < targetGrade &&
+              (subjectKey === 'lote' || candidate.grades.includes(grade)));
+          for (const grade of possibleGrades) {
+            if (grade <= lastGrade ||
+                (subjectKey !== 'lote' && !candidate.grades.includes(grade))) continue;
+            const next = { ids: [...current.ids, candidateId], grades: [...current.grades, grade] };
+            if (isGoal) {
+              if (subjectKey === 'science' && PHYSICS_C_COURSES.includes(targetId)) {
+                const pairedCourseId = PHYSICS_C_COURSES.find(id => id !== targetId);
+                return { ids: [...next.ids, pairedCourseId], grades: [...next.grades, grade] };
+              }
+              return next;
+            }
+            queue.push(next);
+          }
+        }
+      }
+      return null;
+    }
+
+    function buildAcademicDraft() {
+      const preview = document.getElementById('academicPreview');
+      if (!preview) return;
+      const subjectKey = document.getElementById('academicSubject').value;
+      const subject = ACADEMIC_SUBJECTS[subjectKey];
+      const startId = document.getElementById('academicStartCourse').value;
+      const targetId = document.getElementById('academicGoalCourse').value;
+      const targetGrade = Number(document.getElementById('academicGoalGrade').value);
+      const socialTrack = document.getElementById('socialStudiesTrack')?.value || 'onlevel';
+      academicDraftSubject = subjectKey;
+      academicDraft = findAcademicPath(subjectKey, startId, targetId, targetGrade, socialTrack);
+      if (academicDraft && subjectKey === 'science') {
+        const selectedConcurrentIds = [...document.querySelectorAll('#scienceConcurrentOptions input:checked')]
+          .map(input => input.value);
+        const sameYearPrereqs = selectedConcurrentIds
+          .filter(id => ['sci_apbio', 'sci_apphys1'].includes(id))
+          .map(() => 'sci_chemh');
+        for (const courseId of [...selectedConcurrentIds, ...sameYearPrereqs]) {
+          if (academicDraft.ids.includes(courseId)) continue;
+          academicDraft.ids.push(courseId);
+          academicDraft.grades.push(targetGrade);
+        }
+      }
+      if (subjectKey === 'math' && !targetId) {
+        preview.innerHTML = `<p class="tool-status warning">No math course fits Grade ${targetGrade} from the selected freshman starting course under the modeled grade and prerequisite rules. Try a later grade or a different starting course.</p>`;
+        return;
+      }
+      if (!academicDraft) {
+        preview.innerHTML = `<p class="tool-status warning">No prerequisite-based ${escapeHtml(subject.label)} sequence from ${escapeHtml(COURSES.find(course => course.id === startId)?.name || startId)} to ${escapeHtml(COURSES.find(course => course.id === targetId)?.name || targetId)} fits before ${GRADE_NAMES[targetGrade]}. Try a different starting course, goal course, or goal year.</p>`;
+        return;
+      }
+      const gradeByPathCourse = new Map(academicDraft.ids.map((id, index) => [id, academicDraft.grades[index]]));
+      const implicitSummerIds = new Set(getImplicitAcademicSummerIds(subjectKey, startId));
+      const previouslyCompletedIds = new Set([
+        ...implicitSummerIds,
+        ...(subjectKey === 'math' ? getEarlierMathCourseIds(startId) : getEarlierLanguageCourseIds(startId))
+      ]);
+      const existingPlacementConflicts = academicDraft.ids.flatMap((id, index) => {
+        const existingGrade = GRADES.find(grade => plan[grade].includes(id));
+        return existingGrade !== undefined && existingGrade !== academicDraft.grades[index]
+          ? [{ id, grade: existingGrade, suggestedGrade: academicDraft.grades[index] }]
+          : [];
+      });
+      const conflictingGrades = subjectKey === 'science' ? [] : academicDraft.grades.filter((grade, index) =>
+        plan[grade].some(id => {
+          const course = COURSES.find(item => item.id === id);
+          return course && getCourseCats(course).includes(subject.category) &&
+            gradeByPathCourse.get(id) !== grade && id !== academicDraft.ids[index] &&
+            !previouslyCompletedIds.has(id);
+        })
+      );
+      const proposedPlan = Object.fromEntries(GRADES.map(grade => [grade, [...plan[grade]]]));
+      academicDraft.ids.forEach((id, index) => {
+        const grade = academicDraft.grades[index];
+        if (!proposedPlan[grade].includes(id) && !summerCompleted.includes(id)) {
+          proposedPlan[grade].push(id);
+        }
+      });
+      for (const id of previouslyCompletedIds) {
+        for (const grade of GRADES) proposedPlan[grade] = proposedPlan[grade].filter(courseId => courseId !== id);
+      }
+      const sciencePrereqErrors = subjectKey === 'science'
+        ? [...new Set(academicDraft.ids.flatMap((id, index) => {
+            const ruleError = getPrereqErrorAtOrBeforeGrade(id, academicDraft.grades[index], proposedPlan);
+            if (ruleError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${ruleError}`];
+            if (isCoreMathSequenceCourse(id)) {
+              const mathError = getPrereqErrorBeforeGrade(id, academicDraft.grades[index], proposedPlan);
+              if (mathError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${mathError}`];
+            }
+            return [];
+          }))]
+        : [];
+      const multipleAlgebraIIChoices = subjectKey === 'science' &&
+        academicDraft.ids.filter(id => ALGEBRA_II_COURSES.includes(id)).length > 1;
+      const scheduleLoadErrors = GRADES
+        .map(grade => getScheduleLoadError(grade, proposedPlan[grade]))
+        .filter(Boolean);
+      const rows = academicDraft.ids.map((id, index) => {
+        const course = COURSES.find(item => item.id === id);
+        return `<tr><td>${GRADE_NAMES[academicDraft.grades[index]]}</td><td>${escapeHtml(course.name)}</td></tr>`;
+      }).join('');
+      const summerIds = getImplicitAcademicSummerIds(subjectKey, document.getElementById('academicStartCourse').value)
+        .filter(id => !summerCompleted.includes(id));
+      const summerNote = summerIds.length
+        ? `<p class="tool-note">Summer / previously completed: ${summerIds.map(id => escapeHtml(COURSES.find(course => course.id === id)?.name || id)).join(', ')}. These prerequisites will be marked complete when you add the sequence.</p>`
+        : '';
+      const socialSequenceNote = socialTrack === 'dual'
+        ? `Track: Dual credit${targetGrade === 12 ? '; HIST 1301 and 1302 are paired in Grade 11; Government and Economics are scheduled together in Grade 12.' : '; HIST 1301 and 1302 are paired in Grade 11.'}`
+        : `Track: ${socialTrack === 'ap' ? 'AP only' : 'On-level only'}${targetGrade === 12 ? '; Government and Economics are scheduled together in Grade 12.' : '.'}`;
+      const sequenceNote = subjectKey === 'english' && ['e1301', 'e1302'].includes(targetId) && targetGrade === 11
+        ? '<p class="tool-note">ENGL 1301 and 1302 together are planned as the English III year.</p>'
+        : subjectKey === 'english' && ['e2332', 'e2333'].includes(targetId)
+          ? '<p class="tool-note">ENGL 1301 and 1302 are planned as English III in Grade 11; ENGL 2332 and 2333 are paired in Grade 12.</p>'
+          : subjectKey === 'socialStudies'
+            ? `<p class="tool-note">${socialSequenceNote}</p>`
+            : '';
+      preview.innerHTML = `
+        <table class="tool-table"><thead><tr><th>Year</th><th>Suggested course</th></tr></thead><tbody>${rows}</tbody></table>
+        ${sequenceNote}
+        ${summerNote}
+        ${existingPlacementConflicts.length
+          ? `<p class="tool-status warning">${existingPlacementConflicts.map(conflict => `${escapeHtml(COURSES.find(course => course.id === conflict.id)?.name || conflict.id)} is already planned for ${GRADE_NAMES[conflict.grade]}, not ${GRADE_NAMES[conflict.suggestedGrade]}.`).join(' ')}</p>`
+          : conflictingGrades.length
+            ? `<p class="tool-status warning">A ${escapeHtml(subject.label)} course is already planned in a suggested year. Review the plan before adding this sequence.</p>`
+            : multipleAlgebraIIChoices
+              ? '<p class="tool-status warning">Choose only one Algebra II level to take with your science courses.</p>'
+            : sciencePrereqErrors.length
+              ? `<p class="tool-status warning">${sciencePrereqErrors.map(escapeHtml).join(' ')}</p>`
+            : scheduleLoadErrors.length
+              ? `<p class="tool-status warning">${scheduleLoadErrors.map(escapeHtml).join(' ')}</p>`
+            : `<p class="tool-status">This ${escapeHtml(subject.label)} sequence follows the planner’s modeled prerequisite rules and fits the selected years.</p>`}`;
+    }
+
+    function applyAcademicDraft() {
+      if (!academicDraft) {
+        showToast('Build a valid academic sequence first.');
+        return;
+      }
+      const implicitSummerIds = getImplicitAcademicSummerIds(
+        academicDraftSubject,
+        document.getElementById('academicStartCourse').value
+      );
+      const previouslyCompletedIds = new Set([
+        ...implicitSummerIds,
+        ...(academicDraftSubject === 'math'
+          ? getEarlierMathCourseIds(document.getElementById('academicStartCourse').value)
+          : getEarlierLanguageCourseIds(document.getElementById('academicStartCourse').value))
+      ]);
+      const proposedPlan = Object.fromEntries(GRADES.map(grade => [grade, [...plan[grade]]]));
+      for (let index = 0; index < academicDraft.ids.length; index++) {
+        const courseId = academicDraft.ids[index];
+        const grade = academicDraft.grades[index];
+        const existingGrade = GRADES.find(plannedGrade => plan[plannedGrade].includes(courseId));
+        if (existingGrade !== undefined && existingGrade !== grade) {
+          showToast(`${COURSES.find(course => course.id === courseId)?.name || courseId} is already planned in ${GRADE_NAMES[existingGrade]}.`);
+          return;
+        }
+        if (['english', 'lote'].includes(academicDraftSubject)) {
+          const category = ACADEMIC_SUBJECTS[academicDraftSubject].category;
+          const anotherCourse = plan[grade].find(id => {
+            const course = COURSES.find(item => item.id === id);
+            return course && getCourseCats(course).includes(category) &&
+              !academicDraft.ids.includes(id) && !previouslyCompletedIds.has(id);
+          });
+          if (anotherCourse) {
+            showToast(`${GRADE_NAMES[grade]} already has a ${ACADEMIC_SUBJECTS[academicDraftSubject].label} course; move or remove it before applying this sequence.`);
+            return;
+          }
+        }
+        if (academicDraftSubject === 'math') {
+          const otherMath = plan[grade].find(id => isCoreMathSequenceCourse(id) && id !== courseId);
+          if (otherMath && !academicDraft.ids.includes(otherMath) &&
+              !previouslyCompletedIds.has(otherMath)) {
+            showToast(`${GRADE_NAMES[grade]} already has a math course; move it before applying this plan.`);
+            return;
+          }
+        } else if (academicDraftSubject === 'socialStudies') {
+          const otherSocialStudies = plan[grade].find(id => {
+            const course = COURSES.find(item => item.id === id);
+            return course && getCourseCats(course).includes('ss') && !academicDraft.ids.includes(id);
+          });
+          if (otherSocialStudies && !academicDraft.ids.includes(otherSocialStudies)) {
+            showToast(`${GRADE_NAMES[grade]} already has a social studies course; move it before applying this plan.`);
+            return;
+          }
+        }
+        if (!proposedPlan[grade].includes(courseId) && !summerCompleted.includes(courseId)) {
+          proposedPlan[grade].push(courseId);
+        }
+      }
+      for (const courseId of previouslyCompletedIds) {
+        for (const grade of GRADES) {
+          proposedPlan[grade] = proposedPlan[grade].filter(id => id !== courseId);
+        }
+      }
+      if (academicDraftSubject === 'science') {
+        const selectedMathIds = academicDraft.ids.filter(isCoreMathSequenceCourse);
+        if (selectedMathIds.filter(id => ALGEBRA_II_COURSES.includes(id)).length > 1) {
+          showToast('Choose only one Algebra II level to take with your science courses.');
+          return;
+        }
+        const missingScienceRequirements = [...new Set(academicDraft.ids.flatMap((id, index) => {
+          const ruleError = getPrereqErrorAtOrBeforeGrade(id, academicDraft.grades[index], proposedPlan);
+          if (ruleError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${ruleError}`];
+          if (isCoreMathSequenceCourse(id)) {
+            const mathError = getPrereqErrorBeforeGrade(id, academicDraft.grades[index], proposedPlan);
+            if (mathError) return [`${COURSES.find(course => course.id === id)?.name || id}: ${mathError}`];
+          }
+          return [];
+        }))];
+        if (missingScienceRequirements.length) {
+          showToast(missingScienceRequirements.join(' '));
+          return;
+        }
+      }
+      for (const grade of GRADES) {
+        const loadError = getScheduleLoadError(grade, proposedPlan[grade]);
+        if (loadError) {
+          showToast(loadError);
+          return;
+        }
+      }
+      plan = proposedPlan;
+      for (const courseId of implicitSummerIds) {
+        if (!summerCompleted.includes(courseId)) summerCompleted.push(courseId);
+      }
+      summerCompleted = summerCompleted.filter(courseId =>
+        !previouslyCompletedIds.has(courseId) || implicitSummerIds.includes(courseId));
+      renderPlanner();
+      renderSidebar(document.getElementById('search').value.toLowerCase().trim());
+      updateCredits();
+      savePlan();
+      closeTool();
+    }
 
     // ─────────────────────────────────────────────────────────────────
     // DRAG AND DROP
@@ -1516,32 +3367,92 @@
       if (!dragSource) return;
 
       const { id, from } = dragSource;
+      const course = COURSES.find(item => item.id === id);
+      if (course && !course.grades.includes(targetGrade) &&
+          !isAcceleratedAcademicSequenceCourse(id)) {
+        showToast(`${course.name} is only available in Grades ${course.grades.join(', ')}.`);
+        dragSource = null;
+        return;
+      }
       const missingReqs = getMissingPrereqs(id);
+      const acceleratedPrereqError = getAcceleratedSequencePrereqError(id, targetGrade);
+      const physicsCPrereqError = getPhysicsCPrereqError(id, targetGrade);
+      const additionalPrereqError = getAdditionalPrereqError(id);
 
-      if (missingReqs.length > 0) {
-        const names = missingReqs.map(reqId => {
-          const reqCourse = COURSES.find(c => c.id === reqId);
-          return reqCourse ? reqCourse.name : reqId;
-        });
-        showToast(`You need: ${names.join(', ')}`);
+      if (acceleratedPrereqError) {
+        showToast(acceleratedPrereqError);
         dragSource = null;
         return;
       }
 
-      // Remove from the source grade if dragged from a grade column (not sidebar)
-      if (typeof from === 'number') {
-        plan[from] = plan[from].filter(cid => cid !== id);
+      if (missingReqs.length > 0) {
+        showToast(`You need: ${formatMissingPrereqGroups(id).join('; ')}`);
+        dragSource = null;
+        return;
       }
 
-      // Add the course and its paired coreq to the target grade (avoid duplicates)
+      if (physicsCPrereqError) {
+        showToast(physicsCPrereqError);
+        dragSource = null;
+        return;
+      }
+
+      if (additionalPrereqError) {
+        showToast(additionalPrereqError);
+        dragSource = null;
+        return;
+      }
+
+      const updatedGrades = new Set([targetGrade]);
+      const proposedPlan = Object.fromEntries(GRADES.map(grade => [grade, [...plan[grade]]]));
+      if (typeof from === 'number') {
+        updatedGrades.add(from);
+      }
+      if (typeof from === 'number' && from !== targetGrade) {
+        proposedPlan[from] = proposedPlan[from].filter(cid => cid !== id);
+      }
+
       const pairedCoreqIds = getCoreqPairIds(id).filter(coreqId => coreqId !== id);
-      if (!plan[targetGrade].includes(id)) {
-        plan[targetGrade] = [...plan[targetGrade], id];
+      if (!proposedPlan[targetGrade].includes(id)) {
+        proposedPlan[targetGrade].push(id);
       }
       for (const pairedId of pairedCoreqIds) {
-        if (!plan[targetGrade].includes(pairedId)) {
-          plan[targetGrade] = [...plan[targetGrade], pairedId];
+        if (!proposedPlan[targetGrade].includes(pairedId)) {
+          proposedPlan[targetGrade].push(pairedId);
         }
+      }
+
+      for (const grade of updatedGrades) {
+        for (const scheduledId of proposedPlan[grade]) {
+          const concurrentError = getConcurrentPrereqError(scheduledId, grade, proposedPlan[grade]);
+          if (concurrentError) {
+            showToast(concurrentError);
+            dragSource = null;
+            return;
+          }
+        }
+      }
+      for (const scheduledId of proposedPlan[targetGrade]) {
+        const scheduledCourse = COURSES.find(item => item.id === scheduledId);
+        if (!scheduledCourse || !getCourseCats(scheduledCourse).includes('science')) continue;
+        const sciencePrereqError = getPrereqErrorAtOrBeforeGrade(scheduledId, targetGrade, proposedPlan);
+        if (sciencePrereqError) {
+          showToast(`${scheduledCourse.name}: ${sciencePrereqError}`);
+          dragSource = null;
+          return;
+        }
+      }
+      for (const grade of updatedGrades) {
+        const loadError = getScheduleLoadError(grade, proposedPlan[grade]);
+        if (loadError) {
+          showToast(loadError);
+          dragSource = null;
+          return;
+        }
+      }
+
+      for (const grade of updatedGrades) {
+        plan[grade] = proposedPlan[grade];
       }
 
       dragSource = null;
